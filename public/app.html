@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10251f">
+  <title>Conversa — Central de atendimento</title>
+  <style>
+    :root {
+      --ink: #172521;
+      --muted: #70817a;
+      --line: #e7ece8;
+      --canvas: #f6f8f6;
+      --surface: #ffffff;
+      --forest: #174a3a;
+      --forest-2: #0e3529;
+      --mint: #daf4df;
+      --lime: #dff55a;
+      --amber: #ffcf78;
+      --blue: #ddecff;
+      --red: #fde2df;
+      --shadow: 0 18px 50px rgba(16, 44, 34, .08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-size: 14px; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 240px minmax(0,1fr); }
+    .sidebar { background: var(--forest-2); color: #eef6ee; padding: 22px 14px; display: flex; flex-direction: column; gap: 22px; }
+    .brand { display:flex; align-items:center; gap:10px; padding: 0 10px; font-weight: 750; letter-spacing: -.45px; font-size: 18px; }
+    .brand-mark { width: 30px; height: 30px; display:grid; place-items:center; background: var(--lime); border-radius: 10px; color: #123a2d; font-weight: 900; font-size: 18px; }
+    .workspace { border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.06); border-radius: 12px; padding: 10px; display:flex; align-items:center; justify-content:space-between; color:#fff; }
+    .workspace small { color: #b7c6bd; display:block; margin-top: 2px; font-size: 11px; }
+    .workspace strong { font-size:13px; }
+    .nav-label { font-size: 10px; font-weight: 700; color:#a8bbb0; letter-spacing:.09em; text-transform:uppercase; padding:0 10px; }
+    .nav { display:grid; gap: 4px; }
+    .nav-button { width: 100%; display:flex; gap:10px; align-items:center; border:0; padding:10px; border-radius:10px; background:transparent; color:#cfe0d5; text-align:left; }
+    .nav-button:hover, .nav-button.active { color: white; background: rgba(255,255,255,.11); }
+    .nav-icon { width:20px; text-align:center; opacity:.9; }
+    .pill { margin-left:auto; min-width:20px; padding:2px 6px; border-radius:20px; text-align:center; background:var(--lime); color:#1e3721; font-size:11px; font-weight:750; }
+    .sidebar-bottom { margin-top:auto; display:grid; gap:14px; }
+    .usage { padding:12px 10px; border-top:1px solid rgba(255,255,255,.12); color:#d3dfd6; }
+    .usage-head { display:flex; justify-content:space-between; margin-bottom:8px; font-size:12px; }
+    .usage-bar { height:6px; background:rgba(255,255,255,.16); border-radius:10px; overflow:hidden; }
+    .usage-bar > span { display:block; height:100%; width:74%; background:var(--lime); border-radius:inherit; }
+    .profile { display:flex; align-items:center; gap:9px; padding: 0 10px; }
+    .avatar { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:800; background:#c7e8d1; color:#184736; flex:0 0 auto; }
+    .profile small { display:block; color:#adc0b3; font-size:11px; margin-top:2px; }
+    .content { min-width:0; display:flex; flex-direction:column; }
+    .topbar { min-height:72px; padding: 0 30px; background:rgba(255,255,255,.86); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:5; backdrop-filter: blur(14px); }
+    .crumb { color:var(--muted); font-size:13px; flex:1; }
+    .crumb strong { color:var(--ink); }
+    .icon-button { width:34px; height:34px; border:1px solid var(--line); background:#fff; border-radius:9px; color:var(--ink); }
+    .top-avatar { width:32px; height:32px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px var(--line); }
+    .page { padding: 28px 30px 40px; max-width: 1700px; width:100%; margin:0 auto; }
+    .view { display:none; }
+    .view.active { display:block; }
+    .headline { display:flex; align-items:flex-start; gap:14px; margin-bottom:24px; }
+    .headline h1 { margin:0; font-size:26px; letter-spacing:-.8px; line-height:1.15; }
+    .headline p { margin:7px 0 0; color:var(--muted); }
+    .headline .actions { margin-left:auto; display:flex; gap:9px; }
+    .button { border:0; background:var(--forest); color:white; min-height:38px; padding:0 13px; border-radius:9px; font-weight:650; box-shadow:0 4px 10px rgba(23,74,58,.12); }
+    .button:hover { background:#103e30; }
+    .button.secondary { color:var(--ink); background:white; border:1px solid var(--line); box-shadow:none; }
+    .button.ghost { color:var(--forest); background:#ebf7ef; box-shadow:none; }
+    .section-card { background:var(--surface); border:1px solid var(--line); border-radius:15px; box-shadow:0 2px 5px rgba(18,54,38,.015); }
+    .metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+    .metric { padding:17px; min-height:119px; }
+    .metric-label { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:12px; }
+    .metric-value { font-weight:750; font-size:29px; letter-spacing:-1px; margin:13px 0 7px; }
+    .metric-change { font-size:12px; color:#478251; font-weight:600; }
+    .metric-change.neutral { color:var(--muted); font-weight:500; }
+    .dashboard-grid { display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(290px,.8fr); gap:18px; }
+    .card-heading { display:flex; align-items:center; justify-content:space-between; padding:18px 19px 0; }
+    .card-heading h2 { font-size:15px; letter-spacing:-.2px; margin:0; }
+    .card-heading small { color:var(--muted); }
+    .chart-wrap { padding:18px 19px 17px; }
+    .chart { height:217px; position:relative; border-bottom:1px solid #dce7df; background:repeating-linear-gradient(to bottom, transparent 0, transparent 53px, #edf2ee 54px); }
+    .chart svg { width:100%; height:100%; overflow:visible; }
+    .chart-labels { display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--muted); }
+    .legend { display:flex; gap:16px; font-size:12px; color:var(--muted); margin-top:17px; }
+    .legend span { display:flex; gap:6px; align-items:center; }
+    .dot { height:8px; width:8px; border-radius:50%; display:inline-block; }
+    .activity { padding:4px 19px 15px; }
+    .activity-row { display:grid; grid-template-columns: 29px 1fr auto; align-items:start; gap:10px; padding:14px 0; border-bottom:1px solid var(--line); }
+    .activity-row:last-child { border-bottom:0; }
+    .activity-icon { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; background:#eef7f1; color:var(--forest); font-size:13px; }
+    .activity-text { font-size:12px; line-height:1.45; }
+    .activity-text strong { font-weight:700; }
+    .activity-time { font-size:11px; color:var(--muted); white-space:nowrap; }
+    .inbox-layout { display:grid; grid-template-columns: 315px minmax(410px, 1fr) 290px; gap:0; min-height:calc(100vh - 144px); overflow:hidden; }
+    .inbox-layout > * { border-radius:0; }
+    .inbox-layout .panel { background:var(--surface); border:1px solid var(--line); min-width:0; }
+    .inbox-layout .conversation-list { border-radius:15px 0 0 15px; border-right:0; }
+    .inbox-layout .details { border-radius:0 15px 15px 0; border-left:0; }
+    .inbox-head { padding:18px 16px 14px; border-bottom:1px solid var(--line); }
+    .inbox-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .inbox-title h2 { margin:0; font-size:16px; }
+    .search { position:relative; }
+    .search input { width:100%; border:1px solid var(--line); background:#f8faf8; height:35px; border-radius:8px; padding:0 10px 0 30px; outline:none; color:var(--ink); }
+    .search::before { content:'⌕'; position:absolute; color:var(--muted); left:10px; top:7px; font-size:18px; line-height:18px; }
+    .filter-row { display:flex; gap:7px; padding:10px 16px; border-bottom:1px solid var(--line); overflow:auto; }
+    .filter { background:#f4f7f4; color:#52635b; border:0; border-radius:18px; padding:6px 10px; white-space:nowrap; font-size:11px; }
+    .filter.active { color:var(--forest); background:var(--mint); font-weight:700; }
+    .conversation-scroll { overflow:auto; max-height:calc(100vh - 294px); }
+    .conversation { width:100%; border:0; background:white; padding:13px 16px; display:grid; grid-template-columns:38px 1fr auto; gap:10px; text-align:left; border-bottom:1px solid #f0f3f0; }
+    .conversation:hover, .conversation.selected { background:#f2faf4; }
+    .conversation.selected { border-left:3px solid var(--forest); padding-left:13px; }
+    .conversation .avatar { width:38px; height:38px; }
+    .conv-name { display:flex; justify-content:space-between; gap:4px; font-size:13px; font-weight:700; }
+    .conv-preview { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:12px; margin-top:5px; }
+    .conv-time { color:var(--muted); font-size:10px; }
+    .unread { margin-top:8px; background:var(--forest); color:#fff; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; font-size:10px; font-weight:700; }
+    .conversation-main { display:flex; flex-direction:column; min-height:600px; }
+    .chat-head { padding:15px 18px; display:flex; align-items:center; border-bottom:1px solid var(--line); gap:10px; }
+    .chat-head .avatar { width:38px; height:38px; }
+    .contact-name { font-weight:750; font-size:14px; }
+    .contact-sub { color:var(--muted); font-size:11px; margin-top:3px; }
+    .contact-sub .online { color:#35a15a; }
+    .chat-tools { margin-left:auto; display:flex; gap:7px; }
+    .chat-tools button { height:31px; width:31px; background:#fff; border:1px solid var(--line); border-radius:8px; color:var(--muted); }
+    .messages { flex:1; background:#f9fbf9; padding:19px; display:flex; flex-direction:column; gap:11px; overflow:auto; min-height:440px; }
+    .date-mark { align-self:center; color:#839087; font-size:10px; background:#eef3ef; padding:5px 9px; border-radius:12px; }
+    .message { max-width:76%; padding:10px 11px; font-size:12px; line-height:1.45; border-radius:11px 11px 11px 3px; background:#fff; border:1px solid #edf1ed; box-shadow:0 1px 2px rgba(13,35,25,.03); }
+    .message.me { align-self:flex-end; background:#dcf5df; border-color:#d1ebd5; border-radius:11px 11px 3px 11px; }
+    .message .time { display:block; color:#829188; font-size:10px; text-align:right; margin-top:5px; }
+    .message.note { align-self:center; max-width:90%; background:#fff7dc; border-color:#ffeb9b; color:#746027; font-size:11px; text-align:center; border-radius:8px; }
+    .reply-bar { padding:12px; border-top:1px solid var(--line); display:flex; gap:8px; align-items:center; }
+    .reply-bar button { border:0; background:transparent; color:var(--muted); font-size:18px; width:28px; }
+    .reply-bar input { min-width:0; flex:1; height:36px; border:1px solid var(--line); border-radius:9px; outline:none; padding:0 10px; }
+    .reply-bar .send { background:var(--forest); color:#fff; border-radius:9px; height:36px; width:39px; font-size:15px; }
+    .details-head { padding:18px; text-align:center; border-bottom:1px solid var(--line); }
+    .details-head .avatar { height:52px; width:52px; margin:0 auto 9px; font-size:14px; }
+    .details-head h3 { margin:0; font-size:15px; }
+    .details-head p { margin:5px 0 0; color:var(--muted); font-size:11px; }
+    .detail-section { padding:16px; border-bottom:1px solid var(--line); }
+    .detail-section h4 { margin:0 0 12px; font-size:12px; }
+    .property { display:flex; gap:8px; padding:6px 0; font-size:12px; color:#52635b; }
+    .property b { color:var(--ink); margin-left:auto; font-weight:650; text-align:right; }
+    .tag-row { display:flex; flex-wrap:wrap; gap:6px; }
+    .tag { background:#edf6ee; color:#317048; padding:4px 7px; font-size:10px; border-radius:5px; font-weight:650; }
+    .tag.blue { color:#376b9c; background:var(--blue); }
+    .task { display:flex; gap:8px; align-items:flex-start; padding:9px 0; font-size:11px; border-top:1px solid #f0f3f0; }
+    .task:first-of-type { border-top:0; }
+    .task input { margin:1px 0; accent-color:var(--forest); }
+    .task small { display:block; color:var(--muted); margin-top:3px; }
+    .pipeline { display:grid; grid-template-columns:repeat(5,minmax(190px,1fr)); gap:14px; overflow:auto; align-items:start; padding-bottom:12px; }
+    .pipeline-col { min-width:190px; }
+    .pipeline-head { display:flex; justify-content:space-between; align-items:center; padding:0 3px 11px; font-size:12px; font-weight:750; }
+    .pipeline-head span { color:var(--muted); font-size:11px; font-weight:500; }
+    .deal { padding:13px; margin-bottom:9px; }
+    .deal-top { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; }
+    .deal h3 { font-size:13px; margin:9px 0 5px; }
+    .deal p { margin:0; font-size:11px; color:var(--muted); }
+    .deal-foot { display:flex; align-items:center; justify-content:space-between; margin-top:13px; padding-top:10px; border-top:1px solid var(--line); }
+    .deal-value { font-weight:750; font-size:12px; }
+    .small-avatar { height:21px; width:21px; border-radius:50%; display:grid; place-items:center; background:#f4d9b5; color:#744b16; font-size:8px; font-weight:800; }
+    .crm-toolbar { display:flex; gap:9px; align-items:center; margin-bottom:17px; }
+    .crm-toolbar .search { width:280px; }
+    .crm-toolbar .button { margin-left:auto; }
+    .automation-layout { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:18px; }
+    .automation-list { padding:8px 18px 15px; }
+    .automation-row { display:grid; grid-template-columns:44px minmax(0,1fr) 96px 88px 36px; gap:13px; align-items:center; padding:14px 0; border-bottom:1px solid var(--line); }
+    .automation-row:last-child { border-bottom:0; }
+    .automation-icon { width:38px; height:38px; display:grid; place-items:center; border-radius:11px; background:#eaf7ed; color:var(--forest); font-size:17px; }
+    .automation-icon.amber { background:#fff4dc; color:#9b6a00; }
+    .automation-icon.blue { background:#edf4ff; color:#4877ac; }
+    .automation-name { font-size:13px; font-weight:750; }
+    .automation-desc { margin-top:4px; font-size:11px; color:var(--muted); }
+    .run-count { font-size:12px; font-weight:700; }
+    .run-count small { display:block; color:var(--muted); font-weight:500; margin-top:3px; }
+    .status { font-size:10px; padding:5px 8px; width:max-content; border-radius:16px; background:#e6f5e9; color:#347944; font-weight:750; }
+    .status.paused { background:#f1f3f1; color:#748078; }
+    .switch { appearance:none; background:#dce4de; width:34px; height:19px; border-radius:18px; position:relative; cursor:pointer; }
+    .switch::after { content:''; position:absolute; top:3px; left:3px; height:13px; width:13px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 2px #789; }
+    .switch:checked { background:var(--forest); }
+    .switch:checked::after { left:18px; }
+    .flow-card { padding:17px; }
+    .flow-card h2 { margin:0; font-size:15px; }
+    .flow-card > p { margin:5px 0 17px; color:var(--muted); font-size:12px; }
+    .flow { display:grid; gap:0; }
+    .flow-node { border:1px solid var(--line); background:#fff; padding:11px; border-radius:10px; font-size:12px; }
+    .flow-node strong { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; font-weight:600; }
+    .connector { height:19px; border-left:1px dashed #9caf9f; margin-left:18px; }
+    .channel-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
+    .channel-card { padding:17px; }
+    .channel-top { display:flex; justify-content:space-between; align-items:center; }
+    .channel-symbol { height:40px; width:40px; display:grid; place-items:center; border-radius:11px; background:#e6f6e7; color:#1b7c3d; font-size:19px; font-weight:800; }
+    .channel-symbol.instagram { background:#fff0f6; color:#a84070; }
+    .channel-symbol.email { background:#eef4ff; color:#4b78ac; }
+    .channel-card h2 { font-size:14px; margin:15px 0 5px; }
+    .channel-card p { min-height:33px; color:var(--muted); font-size:12px; line-height:1.4; margin:0 0 15px; }
+    .channel-card footer { display:flex; align-items:center; justify-content:space-between; color:#387b47; font-size:11px; font-weight:700; }
+    .team-table { margin-top:18px; overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:12px; background:white; }
+    th { color:var(--muted); background:#fbfcfb; padding:11px 14px; text-align:left; font-weight:600; border-bottom:1px solid var(--line); }
+    td { padding:13px 14px; border-bottom:1px solid var(--line); }
+    tr:last-child td { border-bottom:0; }
+    .person { display:flex; gap:9px; align-items:center; font-weight:700; }
+    .person small { display:block; color:var(--muted); font-size:10px; font-weight:500; margin-top:2px; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(8,26,19,.42); display:none; place-items:center; z-index:10; padding:20px; }
+    .modal-backdrop.open { display:grid; }
+    .modal { width:min(550px,100%); background:#fff; border-radius:16px; box-shadow: var(--shadow); overflow:hidden; }
+    .modal-header { padding:18px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+    .modal-header h2 { margin:0; font-size:17px; }
+    .close { border:0; background:transparent; font-size:22px; color:var(--muted); }
+    .modal-body { padding:20px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+    .form-field { display:grid; gap:6px; }
+    .form-field.full { grid-column:1 / -1; }
+    .form-field label { font-size:12px; color:#51625a; font-weight:650; }
+    .form-field input, .form-field select, .form-field textarea { width:100%; min-height:38px; border:1px solid var(--line); border-radius:8px; padding:8px 10px; color:var(--ink); background:#fff; outline-color:#8bb7a0; }
+    .form-field textarea { min-height:78px; resize:vertical; }
+    .modal-footer { padding:14px 20px; display:flex; gap:9px; justify-content:flex-end; border-top:1px solid var(--line); background:#fcfdfc; }
+    .toast { position:fixed; right:22px; bottom:22px; max-width:320px; background:#173e31; color:white; border-radius:11px; padding:12px 14px; box-shadow:var(--shadow); display:none; z-index:15; font-size:12px; }
+    .toast.show { display:block; animation:enter .25s ease both; }
+    @keyframes enter { from { transform:translateY(12px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    @media (max-width: 1150px) {
+      .app { grid-template-columns: 78px minmax(0,1fr); }
+      .sidebar { padding:20px 10px; align-items:center; }
+      .brand span, .workspace strong, .workspace small, .nav-label, .nav-button span:not(.nav-icon), .usage, .profile > div { display:none; }
+      .workspace { padding:9px; }
+      .nav-button { width:44px; justify-content:center; padding:11px; }
+      .pill { position:absolute; margin-left:25px; margin-top:-18px; }
+      .profile { padding:0; }
+      .inbox-layout { grid-template-columns:285px minmax(380px,1fr); }
+      .details { display:none; }
+      .conversation-main { border-radius:0 15px 15px 0!important; border-left:1px solid var(--line)!important; }
+    }
+    @media (max-width: 830px) {
+      .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .dashboard-grid, .automation-layout { grid-template-columns:1fr; }
+      .page { padding:20px; }
+      .topbar { padding:0 20px; }
+      .inbox-layout { grid-template-columns:1fr; min-height:0; }
+      .conversation-list { border-radius:15px 15px 0 0!important; border-right:1px solid var(--line)!important; }
+      .conversation-main { border-radius:0 0 15px 15px!important; min-height:600px; }
+      .conversation-scroll { max-height:260px; }
+      .pipeline { grid-template-columns:repeat(5, 220px); }
+      .channel-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 560px) {
+      .app { grid-template-columns:1fr; }
+      .sidebar { position:sticky; bottom:0; z-index:6; height:58px; padding:7px 8px; flex-direction:row; justify-content:space-around; order:2; }
+      .brand, .workspace, .usage, .profile, .nav-label { display:none; }
+      .nav { grid-template-columns:repeat(5,1fr); gap:2px; width:100%; }
+      .nav-button { width:100%; padding:9px; }
+      .sidebar-bottom { display:none; }
+      .topbar { min-height:56px; padding:0 16px; }
+      .crumb { font-size:12px; }
+      .page { padding:17px 14px 26px; }
+      .headline { margin-bottom:17px; flex-wrap:wrap; }
+      .headline h1 { font-size:22px; }
+      .headline .actions { margin-left:0; width:100%; }
+      .headline .actions .button { flex:1; }
+      .metric-grid { gap:9px; }
+      .metric { padding:13px; min-height:105px; }
+      .metric-value { font-size:24px; }
+      .inbox-layout { margin:0 -1px; }
+      .chat-head { padding:11px; }
+      .messages { padding:14px; min-height:390px; }
+      .message { max-width:86%; }
+      .crm-toolbar { flex-wrap:wrap; }
+      .crm-toolbar .search { width:100%; }
+      .crm-toolbar .button { margin-left:0; }
+      .automation-row { grid-template-columns:38px 1fr 34px; }
+      .automation-row > :nth-child(3), .automation-row > :nth-child(4) { display:none; }
+      .form-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <div class="brand"><div class="brand-mark">C</div><span>conversa</span></div>
+      <button class="workspace" type="button" data-toast="Cada empresa possui dados e canais isolados."><span><strong id="workspaceName">Sua empresa</strong><small>Operação multicanal</small></span><span>⌄</span></button>
+      <div>
+        <div class="nav-label">Operação</div>
+        <nav class="nav">
+          <button class="nav-button active" data-view="dashboard"><span class="nav-icon">⌂</span><span>Visão geral</span></button>
+          <button class="nav-button" data-view="inbox"><span class="nav-icon">▣</span><span>Atendimentos</span><span class="pill">8</span></button>
+          <button class="nav-button" data-view="crm"><span class="nav-icon">◫</span><span>CRM</span></button>
+          <button class="nav-button" data-view="automations"><span class="nav-icon">↝</span><span>Automações</span></button>
+        </nav>
+      </div>
+      <div>
+        <div class="nav-label">Gestão</div>
+        <nav class="nav">
+          <button class="nav-button" data-view="analytics"><span class="nav-icon">◔</span><span>Relatórios</span></button>
+          <button class="nav-button" data-view="channels"><span class="nav-icon">◎</span><span>Canais</span></button>
+          <button class="nav-button" data-view="team"><span class="nav-icon">♧</span><span>Equipe</span></button>
+        </nav>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="usage"><div class="usage-head"><span>Uso de conversas</span><strong>7.4k / 10k</strong></div><div class="usage-bar"><span></span></div></div>
+        <div class="profile"><div class="avatar" id="profileAvatar">VC</div><div><strong id="profileName">Carregando…</strong><small>Administrador</small></div></div>
+      </div>
+    </aside>
+    <main class="content">
+      <header class="topbar"><div class="crumb">Orla Studio <span> / </span><strong id="breadcrumb">Visão geral</strong></div><button class="icon-button" data-toast="Nenhuma nova notificação.">♧</button><button class="icon-button" data-toast="Ajuda: conecte um canal, convide a equipe e publique sua primeira automação.">?</button><div class="avatar top-avatar">KT</div></header>
+      <div class="page">
+        <section id="dashboard" class="view active">
+          <div class="headline"><div><h1>Bom dia, Kaio 👋</h1><p>Veja como sua operação está performando hoje.</p></div><div class="actions"><button class="button secondary" data-view="analytics">Ver relatórios</button><button class="button" data-view="inbox">Abrir atendimentos</button></div></div>
+          <div class="metric-grid">
+            <article class="metric section-card"><div class="metric-label">Conversas em andamento <span>↗</span></div><div class="metric-value">86</div><div class="metric-change">↑ 12,3% <span style="color:var(--muted);font-weight:500">vs. ontem</span></div></article>
+            <article class="metric section-card"><div class="metric-label">Tempo médio de 1ª resposta <span>◷</span></div><div class="metric-value">2m 18s</div><div class="metric-change">↓ 31s <span style="color:var(--muted);font-weight:500">vs. ontem</span></div></article>
+            <article class="metric section-card"><div class="metric-label">Resolvidas hoje <span>✓</span></div><div class="metric-value">142</div><div class="metric-change">↑ 8,6% <span style="color:var(--muted);font-weight:500">vs. ontem</span></div></article>
+            <article class="metric section-card"><div class="metric-label">CSAT médio <span>★</span></div><div class="metric-value">4,8</div><div class="metric-change neutral">Baseado em 93 respostas</div></article>
+          </div>
+          <div class="dashboard-grid">
+            <article class="section-card"><div class="card-heading"><div><h2>Volume de conversas</h2><small>Últimos 7 dias</small></div><button class="button secondary" data-toast="Filtro alterado para os últimos 7 dias.">7 dias⌄</button></div><div class="chart-wrap"><div class="chart"><svg viewBox="0 0 740 220" preserveAspectRatio="none" role="img" aria-label="Linha de conversas recebidas e resolvidas nos últimos sete dias"><defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a4e0af" stop-opacity=".45"/><stop offset="1" stop-color="#a4e0af" stop-opacity="0"/></linearGradient></defs><path d="M0,186 L0,140 C52,132 72,155 123,117 C174,79 203,113 246,91 C301,64 330,102 370,69 C421,28 465,79 492,66 C551,37 588,62 617,43 C657,24 699,34 740,13 L740,220 L0,220Z" fill="url(#area)"/><path d="M0,140 C52,132 72,155 123,117 C174,79 203,113 246,91 C301,64 330,102 370,69 C421,28 465,79 492,66 C551,37 588,62 617,43 C657,24 699,34 740,13" fill="none" stroke="#22734c" stroke-width="3"/><path d="M0,174 C52,167 79,175 123,147 C168,121 196,145 246,130 C301,109 330,133 370,105 C421,73 450,121 492,98 C545,74 582,98 617,83 C657,68 699,72 740,58" fill="none" stroke="#a0aba4" stroke-width="2.5" stroke-dasharray="6 6"/></svg></div><div class="chart-labels"><span>Seg, 09</span><span>Ter, 10</span><span>Qua, 11</span><span>Qui, 12</span><span>Sex, 13</span><span>Sáb, 14</span><span>Hoje</span></div><div class="legend"><span><i class="dot" style="background:#22734c"></i>Recebidas</span><span><i class="dot" style="background:#a0aba4"></i>Resolvidas</span></div></div></article>
+            <article class="section-card"><div class="card-heading"><div><h2>Atividade recente</h2><small>Da sua equipe</small></div><button class="button secondary" data-view="inbox">Ver tudo</button></div><div class="activity"><div class="activity-row"><div class="activity-icon">✓</div><div class="activity-text"><strong>Bruna</strong> resolveu a conversa com <strong>Mariana Costa</strong><br><span style="color:var(--muted)">Dúvida sobre entrega</span></div><span class="activity-time">agora</span></div><div class="activity-row"><div class="activity-icon">↝</div><div class="activity-text"><strong>Automação</strong> enviou a pesquisa de satisfação para 12 clientes</div><span class="activity-time">8 min</span></div><div class="activity-row"><div class="activity-icon">+</div><div class="activity-text"><strong>Rafael</strong> criou oportunidade de <strong>R$ 6.800</strong><br><span style="color:var(--muted)">Empresa: Nimbus Lab</span></div><span class="activity-time">26 min</span></div><div class="activity-row"><div class="activity-icon">◎</div><div class="activity-text"><strong>WhatsApp Comercial</strong> conectado com sucesso</div><span class="activity-time">1 h</span></div></div></article>
+          </div>
+        </section>
+
+        <section id="inbox" class="view">
+          <div class="headline"><div><h1>Atendimentos</h1><p>Uma caixa de entrada compartilhada para todos os seus canais.</p></div><div class="actions"><button class="button secondary" data-toast="Filtro de atendentes aberto.">Filtrar</button><button class="button" data-modal="new-conversation">+ Nova conversa</button></div></div>
+          <div class="inbox-layout">
+            <aside class="panel conversation-list"><div class="inbox-head"><div class="inbox-title"><h2>Caixa de entrada</h2><button class="button secondary" style="min-height:29px;padding:0 8px" data-toast="Vistas salvas estão disponíveis para sua equipe.">⌄</button></div><div class="search"><input id="conversationSearch" placeholder="Buscar conversas"></div></div><div class="filter-row"><button class="filter active">Abertas <b>8</b></button><button class="filter">Minhas</button><button class="filter">Não lidas</button></div><div class="conversation-scroll" id="conversationList">
+              <button class="conversation selected" data-contact="mariana"><div class="avatar" style="background:#f6d9d3;color:#8c4236">MC</div><div><div class="conv-name"><span>Mariana Costa</span></div><div class="conv-preview">Perfeito, obrigada pela explicação!</div></div><div><div class="conv-time">09:42</div></div></button>
+              <button class="conversation" data-contact="lucas"><div class="avatar" style="background:#d8e8f7;color:#345d86">LP</div><div><div class="conv-name"><span>Lucas Pereira</span></div><div class="conv-preview">Qual o prazo para a instalação?</div></div><div><div class="conv-time">09:38</div><div class="unread">2</div></div></button>
+              <button class="conversation" data-contact="nimbus"><div class="avatar" style="background:#f5e8bb;color:#7c6223">NL</div><div><div class="conv-name"><span>Nimbus Lab</span></div><div class="conv-preview">O arquivo foi enviado para o e-mail.</div></div><div><div class="conv-time">09:19</div></div></button>
+              <button class="conversation" data-contact="carol"><div class="avatar" style="background:#eadcf6;color:#6f4788">CA</div><div><div class="conv-name"><span>Carol Almeida</span></div><div class="conv-preview">Áudio · 0:21</div></div><div><div class="conv-time">08:56</div></div></button>
+              <button class="conversation" data-contact="gabriel"><div class="avatar" style="background:#d8eee4;color:#226047">GO</div><div><div class="conv-name"><span>Gabriel Oliveira</span></div><div class="conv-preview">Vocês atendem no sábado?</div></div><div><div class="conv-time">08:45</div><div class="unread">1</div></div></button>
+              <button class="conversation" data-contact="aline"><div class="avatar" style="background:#f8e0cb;color:#925a2d">AS</div><div><div class="conv-name"><span>Aline Souza</span></div><div class="conv-preview">Obrigada! Vou fazer o pagamento.</div></div><div><div class="conv-time">Ontem</div></div></button>
+            </div></aside>
+            <section class="panel conversation-main"><header class="chat-head"><div class="avatar" id="chatAvatar" style="background:#f6d9d3;color:#8c4236">MC</div><div><div class="contact-name" id="chatName">Mariana Costa</div><div class="contact-sub"><span class="online">●</span> Online agora · WhatsApp</div></div><div class="chat-tools"><button data-toast="Contato atribuído a Bruna Ferreira.">♧</button><button data-toast="Chamada não disponível na demonstração.">⌕</button><button data-toast="Mais ações da conversa.">•••</button></div></header><div class="messages" id="messages"><div class="date-mark">Hoje</div><div class="message">Olá, Mariana! Tudo bem? Vi que você tem dúvidas sobre o prazo de entrega.<span class="time">09:31 ✓✓</span></div><div class="message me">Oi, Bruna! Tudo, e com você? Sim, queria saber se o pedido chega antes do dia 22.<span class="time">09:33</span></div><div class="message">Com certeza. Para o CEP informado, a previsão é de 3 a 5 dias úteis. Se confirmar hoje, deve chegar até sexta-feira.<span class="time">09:37 ✓✓</span></div><div class="message me">Perfeito, obrigada pela explicação!<span class="time">09:42</span></div><div class="message note">✦ Regra “Pedido confirmado” adicionou a tag <b>Compra quente</b></div></div><form class="reply-bar" id="replyForm"><button type="button" data-toast="Anexos: imagem, vídeo, PDF ou áudio.">＋</button><input id="replyInput" placeholder="Escreva uma resposta" autocomplete="off"><button type="button" data-toast="Selecione um modelo de mensagem aprovado.">☷</button><button class="send" aria-label="Enviar mensagem">➤</button></form></section>
+            <aside class="panel details"><div class="details-head"><div class="avatar" id="detailAvatar" style="background:#f6d9d3;color:#8c4236">MC</div><h3 id="detailName">Mariana Costa</h3><p id="detailPhone">+55 11 99918-4027</p></div><section class="detail-section"><h4>Informações</h4><div class="property"><span>Responsável</span><b>Bruna Ferreira</b></div><div class="property"><span>Funil</span><b>Vendas B2C</b></div><div class="property"><span>Última compra</span><b>R$ 420,00</b></div></section><section class="detail-section"><h4>Etiquetas</h4><div class="tag-row"><span class="tag">Compra quente</span><span class="tag blue">WhatsApp</span><button class="tag" style="border:0" data-toast="Etiquetas do contato abertas.">+ adicionar</button></div></section><section class="detail-section"><h4>Tarefas <span style="color:var(--muted);font-weight:500">(2)</span></h4><label class="task"><input type="checkbox"><span>Confirmar recebimento do pedido<small>Amanhã, 10:00</small></span></label><label class="task"><input type="checkbox"><span>Enviar cupom de recompra<small>Em 7 dias</small></span></label></section></aside>
+          </div>
+        </section>
+
+        <section id="crm" class="view">
+          <div class="headline"><div><h1>CRM de vendas</h1><p>Acompanhe oportunidades, clientes e cada próximo passo.</p></div><div class="actions"><button class="button secondary" data-toast="Os filtros do funil foram abertos.">Filtrar</button><button class="button" data-modal="new-deal">+ Nova oportunidade</button></div></div>
+          <div class="crm-toolbar"><div class="search"><input placeholder="Buscar oportunidades ou contatos"></div><button class="button secondary" data-toast="Exibindo todos os responsáveis.">Todos os responsáveis ⌄</button><button class="button secondary" data-toast="Período ajustado: setembro de 2026.">Setembro de 2026 ⌄</button><button class="button secondary" data-toast="Visualização em Kanban selecionada.">▦ Kanban</button></div>
+          <div class="pipeline">
+            <div class="pipeline-col"><div class="pipeline-head">Novos leads <span>4 · R$ 11.400</span></div><article class="deal section-card"><div class="deal-top"><span>Hoje, 09:19</span><span>●</span></div><h3>Nimbus Lab</h3><p>Plano Scale · B2B</p><div class="deal-foot"><span class="deal-value">R$ 6.800</span><span class="small-avatar">KT</span></div></article><article class="deal section-card"><div class="deal-top"><span>Hoje, 08:12</span><span>●</span></div><h3>Murilo & Co.</h3><p>Plano Start · B2B</p><div class="deal-foot"><span class="deal-value">R$ 2.100</span><span class="small-avatar" style="background:#dfe3fa;color:#4e568e">BF</span></div></article></div>
+            <div class="pipeline-col"><div class="pipeline-head">Qualificação <span>3 · R$ 16.300</span></div><article class="deal section-card"><div class="deal-top"><span>Vence hoje</span><span style="color:#b47700">●</span></div><h3>Casa Mimo</h3><p>Plano Growth · B2C</p><div class="deal-foot"><span class="deal-value">R$ 4.500</span><span class="small-avatar" style="background:#d7ede0;color:#3e7154">RM</span></div></article><article class="deal section-card"><div class="deal-top"><span>Ontem</span><span>●</span></div><h3>Letra Viva</h3><p>Plano Scale · B2B</p><div class="deal-foot"><span class="deal-value">R$ 11.800</span><span class="small-avatar">KT</span></div></article></div>
+            <div class="pipeline-col"><div class="pipeline-head">Proposta enviada <span>3 · R$ 24.200</span></div><article class="deal section-card"><div class="deal-top"><span>Vence em 2 dias</span><span>●</span></div><h3>Vitta Saúde</h3><p>Plano Enterprise · B2B</p><div class="deal-foot"><span class="deal-value">R$ 18.000</span><span class="small-avatar" style="background:#f4d8e1;color:#94516a">BF</span></div></article><article class="deal section-card"><div class="deal-top"><span>Quinta-feira</span><span>●</span></div><h3>Studio Aroeira</h3><p>Plano Growth · B2B</p><div class="deal-foot"><span class="deal-value">R$ 6.200</span><span class="small-avatar" style="background:#d7ede0;color:#3e7154">RM</span></div></article></div>
+            <div class="pipeline-col"><div class="pipeline-head">Negociação <span>2 · R$ 31.000</span></div><article class="deal section-card"><div class="deal-top"><span>Hoje, 16:00</span><span style="color:#ba7c00">●</span></div><h3>Brava Foods</h3><p>Plano Enterprise · B2B</p><div class="deal-foot"><span class="deal-value">R$ 24.000</span><span class="small-avatar">KT</span></div></article><article class="deal section-card"><div class="deal-top"><span>Sexta-feira</span><span>●</span></div><h3>AURA Design</h3><p>Plano Scale · B2B</p><div class="deal-foot"><span class="deal-value">R$ 7.000</span><span class="small-avatar" style="background:#f4d8e1;color:#94516a">BF</span></div></article></div>
+            <div class="pipeline-col"><div class="pipeline-head">Fechados <span>5 · R$ 48.600</span></div><article class="deal section-card"><div class="deal-top"><span>Hoje, 08:39</span><span style="color:#37804a">●</span></div><h3>Ateliê Nômade</h3><p>Plano Growth · B2C</p><div class="deal-foot"><span class="deal-value">R$ 3.600</span><span class="small-avatar" style="background:#d7ede0;color:#3e7154">RM</span></div></article><article class="deal section-card"><div class="deal-top"><span>Ontem</span><span style="color:#37804a">●</span></div><h3>Core Consult</h3><p>Plano Scale · B2B</p><div class="deal-foot"><span class="deal-value">R$ 14.400</span><span class="small-avatar">KT</span></div></article></div>
+          </div>
+        </section>
+
+        <section id="automations" class="view">
+          <div class="headline"><div><h1>Automações</h1><p>Crie jornadas para responder, qualificar e reativar clientes automaticamente.</p></div><div class="actions"><button class="button secondary" data-toast="Central de modelos aberta.">Modelos</button><button class="button" data-modal="new-automation">+ Criar automação</button></div></div>
+          <div class="automation-layout"><article class="section-card"><div class="card-heading"><div><h2>Fluxos ativos</h2><small>Gerenciam ações em tempo real</small></div><button class="button secondary" data-toast="Ordenando por execução recente.">Mais recentes⌄</button></div><div class="automation-list"><div class="automation-row"><div class="automation-icon">✦</div><div><div class="automation-name">Boas-vindas no WhatsApp</div><div class="automation-desc">Primeira mensagem recebida → Qualifica intenção → Encaminha</div></div><div class="run-count">1.284<small>execuções</small></div><div class="status">ATIVA</div><input class="switch" type="checkbox" checked aria-label="Ativar boas-vindas"></div><div class="automation-row"><div class="automation-icon amber">◔</div><div><div class="automation-name">Pesquisa de satisfação</div><div class="automation-desc">Conversa resolvida → Aguarda 15 min → Envia CSAT</div></div><div class="run-count">942<small>execuções</small></div><div class="status">ATIVA</div><input class="switch" type="checkbox" checked aria-label="Ativar pesquisa de satisfação"></div><div class="automation-row"><div class="automation-icon blue">↝</div><div><div class="automation-name">Recuperação de orçamento</div><div class="automation-desc">Proposta enviada → Aguarda 48 h → Envia lembrete</div></div><div class="run-count">118<small>execuções</small></div><div class="status">ATIVA</div><input class="switch" type="checkbox" checked aria-label="Ativar recuperação de orçamento"></div><div class="automation-row"><div class="automation-icon">⌁</div><div><div class="automation-name">Reativação de clientes</div><div class="automation-desc">Sem compra há 60 dias → Envia cupom personalizado</div></div><div class="run-count">0<small>execuções</small></div><div class="status paused">PAUSADA</div><input class="switch" type="checkbox" aria-label="Ativar reativação de clientes"></div></div></article>
+            <aside class="section-card flow-card"><h2>Boas-vindas no WhatsApp</h2><p>Fluxo que mais gera atendimentos qualificados.</p><div class="flow"><div class="flow-node"><strong>GATILHO</strong>Cliente envia a primeira mensagem</div><div class="connector"></div><div class="flow-node"><strong>AÇÃO</strong>Enviar mensagem de boas-vindas</div><div class="connector"></div><div class="flow-node"><strong>CONDIÇÃO</strong>Identificou intenção de compra?</div><div class="connector"></div><div class="flow-node"><strong>SIM</strong>Adicionar tag “Compra quente”</div></div><button class="button secondary" style="width:100%;margin-top:18px" data-toast="Editor visual do fluxo aberto.">Editar fluxo</button></aside>
+          </div>
+        </section>
+
+        <section id="analytics" class="view">
+          <div class="headline"><div><h1>Relatórios</h1><p>Indicadores para acompanhar produtividade e qualidade do atendimento.</p></div><div class="actions"><button class="button secondary" data-toast="Relatório exportado como CSV.">Exportar</button><button class="button" data-toast="Agendamento mensal salvo.">Agendar relatório</button></div></div>
+          <div class="metric-grid"><article class="metric section-card"><div class="metric-label">Taxa de resolução</div><div class="metric-value">91,4%</div><div class="metric-change">↑ 4,1 p.p. <span style="color:var(--muted);font-weight:500">este mês</span></div></article><article class="metric section-card"><div class="metric-label">Tempo médio de resolução</div><div class="metric-value">11m 04s</div><div class="metric-change">↓ 2m 10s <span style="color:var(--muted);font-weight:500">este mês</span></div></article><article class="metric section-card"><div class="metric-label">Taxa de reabertura</div><div class="metric-value">3,2%</div><div class="metric-change neutral">Meta: abaixo de 5%</div></article><article class="metric section-card"><div class="metric-label">Conversão por chat</div><div class="metric-value">18,7%</div><div class="metric-change">↑ 2,8 p.p. <span style="color:var(--muted);font-weight:500">este mês</span></div></article></div>
+          <article class="section-card"><div class="card-heading"><div><h2>Desempenho por atendente</h2><small>Últimos 30 dias</small></div><button class="button secondary" data-toast="Dados atualizados agora.">Atualizar</button></div><div class="team-table"><table><thead><tr><th>Atendente</th><th>Conversas resolvidas</th><th>1ª resposta</th><th>CSAT</th><th>Conversão</th></tr></thead><tbody><tr><td><div class="person"><span class="avatar">BF</span><span>Bruna Ferreira<small>Vendas</small></span></div></td><td>384</td><td>1m 47s</td><td>4,9 ★</td><td>22,1%</td></tr><tr><td><div class="person"><span class="avatar" style="background:#d7ede0;color:#3e7154">RM</span><span>Rafael Martins<small>Suporte</small></span></div></td><td>351</td><td>2m 05s</td><td>4,8 ★</td><td>16,4%</td></tr><tr><td><div class="person"><span class="avatar" style="background:#dfe3fa;color:#4e568e">LS</span><span>Larissa Santos<small>Suporte</small></span></div></td><td>329</td><td>2m 26s</td><td>4,8 ★</td><td>14,8%</td></tr><tr><td><div class="person"><span class="avatar" style="background:#f4d8e1;color:#94516a">VN</span><span>Victor Nunes<small>Vendas</small></span></div></td><td>286</td><td>2m 33s</td><td>4,7 ★</td><td>19,2%</td></tr></tbody></table></div></article>
+        </section>
+
+        <section id="channels" class="view">
+          <div class="headline"><div><h1>Canais</h1><p>Centralize WhatsApp, e-mail e SMS na mesma operação.</p></div><div class="actions"><button class="button" data-connect="whatsapp">+ Conectar WhatsApp</button></div></div>
+          <div class="channel-grid" id="channelCards"><article class="channel-card section-card"><div class="channel-top"><div class="channel-symbol">◔</div><span class="status paused">NÃO CONECTADO</span></div><h2>WhatsApp Business</h2><p>Conecte sua conta pela API oficial da Meta.</p><footer><span style="color:var(--muted)">Aguardando conexão</span><button class="button secondary" style="min-height:30px" data-connect="whatsapp">Conectar</button></footer></article><article class="channel-card section-card"><div class="channel-top"><div class="channel-symbol email">✉</div><span class="status paused">NÃO CONECTADO</span></div><h2>E-mail</h2><p>Envie campanhas e responda contatos pelo mesmo lugar.</p><footer><span style="color:var(--muted)">Aguardando conexão</span><button class="button secondary" style="min-height:30px" data-connect="email">Conectar</button></footer></article><article class="channel-card section-card"><div class="channel-top"><div class="channel-symbol instagram" style="background:#f2edff;color:#7356a0">⌁</div><span class="status paused">NÃO CONECTADO</span></div><h2>SMS</h2><p>Envie notificações e lembretes pela Twilio.</p><footer><span style="color:var(--muted)">Aguardando conexão</span><button class="button secondary" style="min-height:30px" data-connect="sms">Conectar</button></footer></article></div>
+          <article class="section-card" style="margin-top:18px;padding:20px"><div style="display:flex;gap:15px;align-items:flex-start"><div class="automation-icon">✓</div><div><h2 style="font-size:15px;margin:1px 0 5px">Sua conexão com o WhatsApp está saudável</h2><p style="color:var(--muted);margin:0;font-size:12px">A última sincronização foi há 2 minutos. Nenhuma mensagem pendente de entrega.</p></div><button class="button secondary" style="margin-left:auto" data-toast="Histórico de saúde sincronizado.">Ver saúde do canal</button></div></article>
+        </section>
+
+        <section id="team" class="view">
+          <div class="headline"><div><h1>Equipe</h1><p>Gerencie pessoas, permissões e capacidade do seu time.</p></div><div class="actions"><button class="button" data-modal="invite-member">+ Convidar pessoa</button></div></div>
+          <div class="metric-grid"><article class="metric section-card"><div class="metric-label">Membros ativos</div><div class="metric-value">12</div><div class="metric-change neutral">3 administradores · 9 agentes</div></article><article class="metric section-card"><div class="metric-label">Atendimentos por agente</div><div class="metric-value">28,4</div><div class="metric-change">↑ 9,1% <span style="color:var(--muted);font-weight:500">hoje</span></div></article><article class="metric section-card"><div class="metric-label">Ocupação média</div><div class="metric-value">78%</div><div class="metric-change neutral">Dentro da faixa ideal</div></article><article class="metric section-card"><div class="metric-label">Disponíveis agora</div><div class="metric-value">7</div><div class="metric-change neutral">de 12 membros</div></article></div>
+          <article class="section-card"><div class="card-heading"><div><h2>Pessoas</h2><small>Controle de acesso da operação</small></div><button class="button secondary" data-toast="Filtro: todos os papéis.">Todos os papéis⌄</button></div><div class="team-table"><table><thead><tr><th>Nome</th><th>Papel</th><th>Canal</th><th>Status</th><th>Conversas abertas</th><th></th></tr></thead><tbody><tr><td><div class="person"><span class="avatar">KT</span><span>Kaio Triani<small>kaio@orlastudio.com</small></span></div></td><td>Administrador</td><td>Todos</td><td><span class="status">ONLINE</span></td><td>4</td><td>•••</td></tr><tr><td><div class="person"><span class="avatar" style="background:#dfe3fa;color:#4e568e">BF</span><span>Bruna Ferreira<small>bruna@orlastudio.com</small></span></div></td><td>Agente</td><td>WhatsApp</td><td><span class="status">ONLINE</span></td><td>8</td><td>•••</td></tr><tr><td><div class="person"><span class="avatar" style="background:#d7ede0;color:#3e7154">RM</span><span>Rafael Martins<small>rafael@orlastudio.com</small></span></div></td><td>Agente</td><td>WhatsApp, Instagram</td><td><span class="status">ONLINE</span></td><td>5</td><td>•••</td></tr><tr><td><div class="person"><span class="avatar" style="background:#f4d8e1;color:#94516a">VN</span><span>Victor Nunes<small>victor@orlastudio.com</small></span></div></td><td>Gestor</td><td>Todos</td><td><span class="status paused">AUSENTE</span></td><td>0</td><td>•••</td></tr></tbody></table></div></article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-header"><h2 id="modalTitle">Nova conversa</h2><button class="close" data-close-modal aria-label="Fechar">×</button></div><form id="modalForm"><div class="modal-body" id="modalBody"></div><div class="modal-footer"><button type="button" class="button secondary" data-close-modal>Cancelar</button><button class="button" id="modalSubmit">Salvar</button></div></form></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    const viewLabels = { dashboard:'Visão geral', inbox:'Atendimentos', crm:'CRM', automations:'Automações', analytics:'Relatórios', channels:'Canais', team:'Equipe' };
+    const contacts = {
+      mariana: { name:'Mariana Costa', initials:'MC', color:'#f6d9d3', ink:'#8c4236', phone:'+55 11 99918-4027', context:'Perfeito, obrigada pela explicação!' },
+      lucas: { name:'Lucas Pereira', initials:'LP', color:'#d8e8f7', ink:'#345d86', phone:'+55 21 98742-2290', context:'Qual o prazo para a instalação?' },
+      nimbus: { name:'Nimbus Lab', initials:'NL', color:'#f5e8bb', ink:'#7c6223', phone:'+55 11 3114-8821', context:'O arquivo foi enviado para o e-mail.' },
+      carol: { name:'Carol Almeida', initials:'CA', color:'#eadcf6', ink:'#6f4788', phone:'+55 31 99552-0046', context:'Áudio · 0:21' },
+      gabriel: { name:'Gabriel Oliveira', initials:'GO', color:'#d8eee4', ink:'#226047', phone:'+55 11 98351-7798', context:'Vocês atendem no sábado?' },
+      aline: { name:'Aline Souza', initials:'AS', color:'#f8e0cb', ink:'#925a2d', phone:'+55 11 99514-2013', context:'Obrigada! Vou fazer o pagamento.' }
+    };
+    const messages = {
+      mariana: ['Olá, Mariana! Tudo bem? Vi que você tem dúvidas sobre o prazo de entrega.', 'Oi, Bruna! Tudo, e com você? Sim, queria saber se o pedido chega antes do dia 22.', 'Com certeza. Para o CEP informado, a previsão é de 3 a 5 dias úteis. Se confirmar hoje, deve chegar até sexta-feira.', 'Perfeito, obrigada pela explicação!'],
+      lucas: ['Olá, Lucas! Posso ajudar com a instalação?', 'Qual o prazo para a instalação?', 'Para o seu endereço, conseguimos agendar uma janela a partir de quinta-feira.'],
+      nimbus: ['Olá, Nimbus Lab. Recebemos o pedido de proposta.', 'O arquivo foi enviado para o e-mail.', 'Perfeito, nossa especialista revisa ainda hoje.'],
+      carol: ['Oi, Carol! Ouvi seu áudio e já estou verificando a informação.'],
+      gabriel: ['Olá, Gabriel! Sim, nosso suporte funciona aos sábados das 9h às 13h.', 'Vocês atendem no sábado?'],
+      aline: ['Seu link de pagamento está ativo até hoje às 23:59.', 'Obrigada! Vou fazer o pagamento.']
+    };
+    let currentContact = 'mariana';
+    const toast = document.getElementById('toast');
+    let toastTimer;
+    function notify(message) { toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(()=>toast.classList.remove('show'), 3200); }
+    document.querySelectorAll('[data-toast]').forEach(el => el.addEventListener('click', () => notify(el.dataset.toast)));
+    function switchView(view) {
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === view));
+      document.querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+      document.getElementById('breadcrumb').textContent = viewLabels[view];
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+    document.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+    function renderMessages(id) {
+      const box = document.getElementById('messages'); const list = messages[id] || [];
+      box.innerHTML = '<div class="date-mark">Hoje</div>' + list.map((msg, index) => `<div class="message ${index % 2 ? 'me' : ''}">${msg}<span class="time">${String(9 + index).padStart(2,'0')}:${index ? '42' : '31'} ${index % 2 ? '' : '✓✓'}</span></div>`).join('') + '<div class="message note">✦ Contato identificado e vinculado ao CRM</div>';
+      box.scrollTop = box.scrollHeight;
+    }
+    document.querySelectorAll('.conversation').forEach(row => row.addEventListener('click', () => {
+      document.querySelectorAll('.conversation').forEach(r => r.classList.remove('selected')); row.classList.add('selected');
+      currentContact = row.dataset.contact; const c = contacts[currentContact];
+      ['chatAvatar','detailAvatar'].forEach(id => { const avatar=document.getElementById(id); avatar.textContent=c.initials; avatar.style.background=c.color; avatar.style.color=c.ink; });
+      document.getElementById('chatName').textContent=c.name; document.getElementById('detailName').textContent=c.name; document.getElementById('detailPhone').textContent=c.phone; renderMessages(currentContact);
+    }));
+    document.getElementById('conversationSearch').addEventListener('input', e => { const q=e.target.value.toLocaleLowerCase('pt-BR'); document.querySelectorAll('.conversation').forEach(row => row.style.display=row.innerText.toLocaleLowerCase('pt-BR').includes(q)?'grid':'none'); });
+    document.getElementById('replyForm').addEventListener('submit', e => { e.preventDefault(); const input=document.getElementById('replyInput'); const text=input.value.trim(); if(!text) return; messages[currentContact].push(text); renderMessages(currentContact); input.value=''; notify('Mensagem enviada para ' + contacts[currentContact].name + '.'); });
+    document.querySelectorAll('.filter').forEach(btn => btn.addEventListener('click', ()=> { document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); notify('Filtro “' + btn.textContent.trim() + '” aplicado.'); }));
+    document.querySelectorAll('.switch').forEach(sw => sw.addEventListener('change', ()=>notify(sw.checked ? 'Automação ativada.' : 'Automação pausada.')));
+    const backdrop = document.getElementById('modalBackdrop');
+    const modalContent = {
+      'new-conversation': { title:'Nova conversa', submit:'Iniciar conversa', fields:`<div class="form-grid"><div class="form-field full"><label>Contato</label><input required placeholder="Nome ou telefone do contato"></div><div class="form-field"><label>Canal</label><select><option>WhatsApp Business</option><option>Instagram Direct</option></select></div><div class="form-field"><label>Responsável</label><select><option>Bruna Ferreira</option><option>Não atribuído</option></select></div><div class="form-field full"><label>Mensagem inicial</label><textarea placeholder="Olá, como podemos ajudar?"></textarea></div></div>` },
+      'new-deal': { title:'Nova oportunidade', submit:'Criar oportunidade', fields:`<div class="form-grid"><div class="form-field"><label>Empresa ou contato</label><input required placeholder="Ex.: Acme Ltda."></div><div class="form-field"><label>Valor estimado</label><input placeholder="R$ 0,00"></div><div class="form-field"><label>Etapa</label><select><option>Novos leads</option><option>Qualificação</option><option>Proposta enviada</option></select></div><div class="form-field"><label>Responsável</label><select><option>Kaio Triani</option><option>Bruna Ferreira</option><option>Rafael Martins</option></select></div><div class="form-field full"><label>Próximo passo</label><textarea placeholder="Ex.: Enviar proposta comercial"></textarea></div></div>` },
+      'new-automation': { title:'Criar automação', submit:'Criar fluxo', fields:`<div class="form-grid"><div class="form-field full"><label>Nome da automação</label><input required placeholder="Ex.: Boas-vindas para novos leads"></div><div class="form-field"><label>Gatilho</label><select><option>Nova mensagem recebida</option><option>Conversa resolvida</option><option>Tag adicionada</option><option>Oportunidade criada</option></select></div><div class="form-field"><label>Canal</label><select><option>WhatsApp Business</option><option>Todos os canais</option></select></div><div class="form-field full"><label>Primeira ação</label><select><option>Enviar mensagem</option><option>Adicionar etiqueta</option><option>Encaminhar para equipe</option><option>Criar tarefa</option></select></div></div>` },
+      'connect-channel': { title:'Conectar um canal', submit:'Continuar conexão', fields:`<div class="form-grid"><div class="form-field full"><label>Canal</label><select><option>WhatsApp Business (API oficial)</option><option>Instagram Direct</option><option>E-mail</option></select></div><div class="form-field full"><label>Nome da conexão</label><input required placeholder="Ex.: WhatsApp Comercial"></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Você será direcionado à etapa segura de autorização para conceder acesso ao canal escolhido.</p>` },
+      'invite-member': { title:'Convidar pessoa', submit:'Enviar convite', fields:`<div class="form-grid"><div class="form-field full"><label>E-mail</label><input required type="email" placeholder="pessoa@empresa.com"></div><div class="form-field"><label>Papel</label><select><option>Agente</option><option>Gestor</option><option>Administrador</option></select></div><div class="form-field"><label>Equipe</label><select><option>Atendimento</option><option>Vendas</option><option>Suporte</option></select></div></div>` }
+    };
+    document.querySelectorAll('[data-modal]').forEach(btn => btn.addEventListener('click',()=> { const config=modalContent[btn.dataset.modal]; document.getElementById('modalTitle').textContent=config.title; document.getElementById('modalSubmit').textContent=config.submit; document.getElementById('modalBody').innerHTML=config.fields; backdrop.classList.add('open'); backdrop.setAttribute('aria-hidden','false'); setTimeout(()=>backdrop.querySelector('input,select,textarea')?.focus(),50); }));
+    function closeModal() { backdrop.classList.remove('open'); backdrop.setAttribute('aria-hidden','true'); }
+    document.querySelectorAll('[data-close-modal]').forEach(btn=>btn.addEventListener('click',closeModal));
+    backdrop.addEventListener('click', e=>{if(e.target===backdrop) closeModal();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape') closeModal();});
+    document.getElementById('modalForm').addEventListener('submit',e=>{e.preventDefault(); const action=document.getElementById('modalSubmit').textContent; closeModal(); notify(action + ' concluído com sucesso.');});
+  </script>
+  <script>
+    (() => {
+      const api = (url, options = {}) => fetch(url, options).then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Não foi possível concluir esta ação.');
+        return data;
+      });
+      const escapeHtml = value => String(value || '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+      let activeChannels = [];
+      let modalKind = null;
+      const channelCopy = {
+        whatsapp: { icon:'◔', className:'', title:'WhatsApp Business', connected:'Via API oficial da Meta', pending:'Conecte um número pela API oficial da Meta.' },
+        email: { icon:'✉', className:'email', title:'E-mail', connected:'Envio transacional com Resend', pending:'Envie e acompanhe e-mails pelo mesmo lugar.' },
+        sms: { icon:'⌁', className:'sms', title:'SMS', connected:'Envio e recebimento com Twilio', pending:'Envie lembretes e notificações por SMS.' }
+      };
+      function initials(name) { return String(name || 'VC').split(/\s+/).slice(0,2).map(part => part[0]).join('').toUpperCase(); }
+      function drawChannels() {
+        const cards = document.getElementById('channelCards');
+        if (!cards) return;
+        const map = Object.fromEntries(activeChannels.map(item => [item.type, item]));
+        cards.innerHTML = Object.entries(channelCopy).map(([type, copy]) => {
+          const item = map[type]; const configured = Boolean(item && item.connected); const detail = configured ? (type === 'whatsapp' ? `Número ID: ${escapeHtml(item.phoneNumberId)}` : type === 'email' ? escapeHtml(item.fromEmail) : escapeHtml(item.fromNumber)) : copy.pending;
+          return `<article class="channel-card section-card"><div class="channel-top"><div class="channel-symbol ${copy.className}">${copy.icon}</div><span class="status ${configured ? '' : 'paused'}">${configured ? 'CONECTADO' : 'NÃO CONECTADO'}</span></div><h2>${copy.title}</h2><p>${detail}<br>${configured ? copy.connected : ''}</p><footer><span style="color:${configured ? '#387b47' : 'var(--muted)'}">${configured ? '● Operacional' : 'Aguardando conexão'}</span><button class="button secondary" style="min-height:30px" data-connect="${type}">${configured ? 'Gerenciar' : 'Conectar'}</button></footer></article>`;
+        }).join('');
+      }
+      function connectionFields(type) {
+        if (type === 'whatsapp') return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: WhatsApp Comercial"></div><div class="form-field"><label>ID do número de telefone</label><input name="phoneNumberId" required placeholder="Ex.: 123456789"></div><div class="form-field"><label>ID da conta WhatsApp Business</label><input name="businessAccountId" required placeholder="Ex.: 123456789"></div><div class="form-field full"><label>Token permanente da Meta</label><input name="accessToken" type="password" required placeholder="Cole o token gerado pela Meta"></div><div class="form-field"><label>Token de verificação do webhook</label><input name="verifyToken" required placeholder="Crie um token exclusivo"></div><div class="form-field"><label>Versão da Graph API</label><input name="graphVersion" value="v23.0" required></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Depois de salvar, informe a URL <b>/webhooks/whatsapp</b> no painel da Meta e use o token de verificação definido aqui.</p>`;
+        if (type === 'email') return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: E-mail Comercial"></div><div class="form-field"><label>Remetente autorizado na Resend</label><input name="fromEmail" type="email" required placeholder="contato@suaempresa.com.br"></div><div class="form-field"><label>Endereço que recebe mensagens</label><input name="inboundAddress" type="email" required placeholder="atendimento@seu-dominio.com"></div><div class="form-field full"><label>Chave de API da Resend</label><input name="apiKey" type="password" required placeholder="re_..."></div><div class="form-field full"><label>Segredo do webhook da Resend</label><input name="webhookSecret" type="password" required placeholder="whsec_..."></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Use um domínio já verificado na Resend e crie um webhook <b>email.received</b> apontando para <b>/webhooks/email</b>.</p>`;
+        return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: SMS Comercial"></div><div class="form-field"><label>Número remetente Twilio</label><input name="fromNumber" required placeholder="+5511999999999"></div><div class="form-field"><label>Account SID</label><input name="accountSid" required placeholder="AC..."></div><div class="form-field full"><label>Auth Token da Twilio</label><input name="authToken" type="password" required placeholder="Token secreto"></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Para receber SMS, aponte o webhook da Twilio para <b>/webhooks/sms</b>.</p>`;
+      }
+      function openConnection(type) {
+        modalKind = type; const names = { whatsapp:'WhatsApp Business', email:'E-mail', sms:'SMS' };
+        document.getElementById('modalTitle').textContent = `Conectar ${names[type]}`;
+        document.getElementById('modalSubmit').textContent = 'Salvar conexão';
+        document.getElementById('modalBody').innerHTML = connectionFields(type);
+        const sheet = document.getElementById('modalBackdrop'); sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false');
+        setTimeout(() => sheet.querySelector('input')?.focus(), 50);
+      }
+      function openComposer() {
+        modalKind = 'message';
+        document.getElementById('modalTitle').textContent = 'Nova mensagem';
+        document.getElementById('modalSubmit').textContent = 'Enviar mensagem';
+        document.getElementById('modalBody').innerHTML = `<div class="form-grid"><div class="form-field"><label>Canal</label><select name="channel"><option value="whatsapp">WhatsApp Business</option><option value="email">E-mail</option><option value="sms">SMS</option></select></div><div class="form-field"><label>Nome do contato</label><input name="name" placeholder="Ex.: Mariana Costa"></div><div class="form-field full"><label>Destinatário</label><input name="recipient" required placeholder="Telefone com DDI ou e-mail"></div><div class="form-field full"><label>Assunto do e-mail <span style="font-weight:400">(opcional)</span></label><input name="subject" placeholder="Ex.: Retorno sobre sua proposta"></div><div class="form-field full"><label>Mensagem</label><textarea name="content" required placeholder="Escreva sua mensagem"></textarea></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">O envio usa o canal conectado pela sua empresa. Para WhatsApp, respeite a janela de atendimento e os modelos aprovados pela Meta.</p>`;
+        const sheet = document.getElementById('modalBackdrop'); sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false');
+        setTimeout(() => sheet.querySelector('input')?.focus(), 50);
+      }
+      async function loadPlatform() {
+        try {
+          const session = await api('/api/session');
+          if (session.admin) { location.replace('/admin.html'); return; }
+          document.getElementById('workspaceName').textContent = session.tenant.name;
+          document.getElementById('profileName').textContent = session.user.name;
+          document.getElementById('profileAvatar').textContent = initials(session.user.name);
+          const overview = await api('/api/overview'); activeChannels = overview.integrations; drawChannels();
+        } catch (error) { location.replace('/'); }
+      }
+      document.addEventListener('click', event => {
+        const compose = event.target.closest('[data-modal="new-conversation"]'); if (!compose) return;
+        event.preventDefault(); event.stopImmediatePropagation(); openComposer();
+      }, true);
+      document.addEventListener('click', event => {
+        const connect = event.target.closest('[data-connect]'); if (!connect) return;
+        event.preventDefault(); event.stopPropagation(); openConnection(connect.dataset.connect);
+      });
+      document.getElementById('modalForm').addEventListener('submit', async event => {
+        if (!modalKind) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        const submit = document.getElementById('modalSubmit'); const previous = submit.textContent; submit.disabled = true; submit.textContent = 'Salvando…';
+        try {
+          const payload = Object.fromEntries(new FormData(event.currentTarget)); payload.type = modalKind;
+          if (modalKind === 'message') {
+            delete payload.type;
+            await api('/api/messages', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+            document.getElementById('modalBackdrop').classList.remove('open'); document.getElementById('modalBackdrop').setAttribute('aria-hidden','true'); notify('Mensagem enviada pelo canal selecionado.'); modalKind = null; return;
+          }
+          const saved = await api('/api/integrations', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+          activeChannels = activeChannels.filter(item => item.type !== saved.type); activeChannels.push(saved); drawChannels();
+          document.getElementById('modalBackdrop').classList.remove('open'); document.getElementById('modalBackdrop').setAttribute('aria-hidden','true'); notify(`${channelCopy[modalKind].title} conectado com segurança.`); modalKind = null;
+        } catch (error) { notify(error.message); }
+        finally { submit.disabled = false; submit.textContent = previous; }
+      }, true);
+      document.getElementById('modalBackdrop').addEventListener('click', event => { if (event.target.id === 'modalBackdrop') modalKind = null; });
+      document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', () => { modalKind = null; }));
+      document.addEventListener('keydown', event => { if (event.key === 'Escape') modalKind = null; });
+      const logout = document.createElement('button'); logout.className = 'icon-button'; logout.type = 'button'; logout.title = 'Sair'; logout.textContent = '↪';
+      logout.addEventListener('click', async () => { try { await api('/api/auth/logout', { method:'POST' }); } finally { location.replace('/'); } });
+      document.querySelector('.topbar').insertBefore(logout, document.querySelector('.top-avatar'));
+      document.getElementById('replyForm').addEventListener('submit', async event => {
+        event.preventDefault(); event.stopImmediatePropagation(); const input = document.getElementById('replyInput'); const content = input.value.trim(); if (!content) return;
+        const contact = contacts[currentContact]; const button = event.currentTarget.querySelector('.send'); button.disabled = true;
+        try { await api('/api/messages', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ channel:'whatsapp', recipient:contact.phone, name:contact.name, content }) }); messages[currentContact].push(content); renderMessages(currentContact); input.value = ''; notify('Mensagem enviada pelo WhatsApp.'); }
+        catch (error) { notify(error.message); }
+        finally { button.disabled = false; }
+      }, true);
+      loadPlatform();
+    })();
+  </script>
+</body>
+</html>

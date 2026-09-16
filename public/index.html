@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10382d">
+  <meta name="description" content="Conversa: atendimento multicanal, CRM e automações para sua operação.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='15' fill='%2317473a'/%3E%3Cpath d='M13 14h22v15H23l-7 6v-6h-3z' fill='%23dff55a'/%3E%3C/svg%3E">
+  <title>Entrar — Conversa</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#14261f; background:#f6f8f5; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100svh; }
+    button, input { font:inherit; }
+    button { cursor:pointer; }
+    .shell { min-height:100svh; display:grid; grid-template-columns:minmax(400px, 1.08fr) minmax(420px, .92fr); }
+    .story { background:#10372c; color:#f5fbf4; padding:clamp(28px,5vw,72px); display:flex; flex-direction:column; overflow:hidden; position:relative; }
+    .story::after { content:""; position:absolute; width:460px; height:460px; right:-180px; bottom:-190px; background:#dff55a; border-radius:48% 52% 40% 60%; opacity:.96; transform:rotate(12deg); }
+    .brand { position:relative; z-index:1; display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.7px; font-size:20px; }
+    .mark { width:33px; height:33px; display:grid; place-items:center; color:#113d30; background:#dff55a; border-radius:11px; font-size:18px; }
+    .intro { position:relative; z-index:1; margin:auto 0; max-width:560px; padding:50px 0 38px; }
+    .eyebrow { color:#c7dacf; text-transform:uppercase; font-size:11px; font-weight:760; letter-spacing:.13em; }
+    h1 { font-size:clamp(36px,4vw,58px); letter-spacing:-.065em; line-height:.99; margin:17px 0 22px; max-width:540px; }
+    .intro > p { max-width:445px; color:#c7dacf; font-size:16px; line-height:1.65; margin:0; }
+    .proof { position:relative; z-index:2; margin-top:36px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(10px); border-radius:17px; padding:18px; display:grid; grid-template-columns:auto 1fr; gap:12px; max-width:440px; }
+    .pulse { width:42px; height:42px; display:grid; place-items:center; border-radius:13px; background:#dff55a; color:#173b30; font-weight:900; }
+    .proof strong { font-size:14px; display:block; margin:1px 0 5px; }
+    .proof span { color:#c7dacf; font-size:12px; line-height:1.45; }
+    .activity { position:relative; z-index:2; width:min(100%, 495px); padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.15); background:rgba(11,39,30,.5); box-shadow:0 20px 50px rgba(0,0,0,.15); }
+    .activity-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:13px; font-size:12px; font-weight:700; }
+    .live { display:flex; gap:6px; align-items:center; color:#b9e1be; font-weight:600; font-size:11px; }
+    .live i { width:7px; height:7px; border-radius:50%; background:#6ae47e; box-shadow:0 0 0 4px rgba(106,228,126,.1); }
+    .activity-row { display:grid; grid-template-columns:31px 1fr auto; gap:9px; align-items:center; padding:9px 0; border-top:1px solid rgba(255,255,255,.09); }
+    .activity-row:first-of-type { border-top:0; }
+    .avatar { width:30px; height:30px; display:grid; place-items:center; border-radius:50%; color:#17493a; background:#e5d4bd; font-size:10px; font-weight:800; }
+    .activity-row:nth-of-type(3) .avatar { background:#d5e4f4; color:#315b82; }.activity-row:nth-of-type(4) .avatar { background:#ead9ec; color:#764d7b; }
+    .activity-row b { display:block; font-size:12px; }.activity-row small { color:#afc8b9; font-size:10px; margin-top:3px; display:block; }.activity-row time { color:#afc8b9; font-size:10px; }
+    .access { display:flex; align-items:center; justify-content:center; padding:36px; background:#f7f9f6; }
+    .form-card { width:min(100%, 420px); }
+    .form-brand { display:none; }
+    h2 { font-size:28px; letter-spacing:-.05em; margin:0 0 8px; } .sub { color:#687b72; margin:0 0 27px; line-height:1.5; font-size:14px; }
+    .tabs { display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid #dfe7e1; margin-bottom:23px; }
+    .tab { border:0; color:#71827a; background:transparent; padding:10px 5px 11px; font-size:13px; font-weight:730; border-bottom:2px solid transparent; margin-bottom:-1px; }
+    .tab.active { color:#174a3a; border-bottom-color:#174a3a; }
+    form { display:grid; gap:14px; }
+    .two { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+    label { display:grid; gap:7px; color:#40554b; font-size:12px; font-weight:700; }
+    input { min-height:45px; padding:0 12px; border:1px solid #d8e2da; color:#172b22; background:#fff; border-radius:10px; outline:none; transition:border .16s, box-shadow .16s; }
+    input:focus { border-color:#4e9870; box-shadow:0 0 0 4px rgba(78,152,112,.13); }
+    .submit { margin-top:5px; min-height:47px; border:0; background:#174a3a; border-radius:10px; color:#fff; font-weight:760; box-shadow:0 8px 18px rgba(23,74,58,.17); }.submit:hover { background:#113e30; }.submit:disabled { opacity:.65; cursor:wait; }
+    .notice { min-height:20px; margin:0; padding:0 2px; color:#c04444; font-size:12px; line-height:1.45; }.notice.success { color:#34774a; }
+    .terms { color:#71827a; font-size:11px; line-height:1.5; margin:4px 0 0; }.terms a { color:#306e51; }
+    .security { display:flex; align-items:center; gap:7px; color:#71827a; font-size:11px; margin-top:30px; }.security b { color:#3b7952; font-size:14px; }
+    .hidden { display:none!important; }
+    @media (max-width: 820px) { .shell { grid-template-columns:1fr; }.story { min-height:330px; padding:28px; }.intro { margin:42px 0 12px; padding:0; }.intro h1 { font-size:37px; max-width:440px; }.proof { display:none; }.activity { display:none; }.access { padding:36px 24px 45px; }.form-brand { display:flex; margin-bottom:38px; color:#174a3a; }.form-brand .mark { font-size:16px; }.two { grid-template-columns:1fr; gap:14px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="story" aria-label="Sobre a plataforma Conversa">
+      <div class="brand"><span class="mark">C</span><span>conversa</span></div>
+      <div class="intro"><span class="eyebrow">Atendimento que vira receita</span><h1>Uma conversa pode mover todo o seu negócio.</h1><p>Centralize WhatsApp, e-mail e SMS, distribua atendimentos e automatize os próximos passos sem perder o contexto do cliente.</p><div class="proof"><span class="pulse">↗</span><div><strong>Tudo no mesmo lugar</strong><span>Converse, acompanhe o funil e mantenha seu time alinhado em cada etapa.</span></div></div></div>
+      <div class="activity"><div class="activity-head"><span>Operação em tempo real</span><span class="live"><i></i> 12 pessoas online</span></div><div class="activity-row"><span class="avatar">MC</span><span><b>Mariana respondeu no WhatsApp</b><small>“Queria entender os planos…”</small></span><time>agora</time></div><div class="activity-row"><span class="avatar">LP</span><span><b>Lucas abriu uma proposta</b><small>Oportunidade movida para negociação</small></span><time>2 min</time></div><div class="activity-row"><span class="avatar">CA</span><span><b>Automação enviou um e-mail</b><small>Follow-up de orçamento</small></span><time>8 min</time></div></div>
+    </section>
+    <section class="access"><div class="form-card"><div class="form-brand brand"><span class="mark">C</span><span>conversa</span></div><h2 id="heading">Que bom ver você.</h2><p class="sub" id="subheading">Entre para acessar a operação da sua empresa.</p><div class="tabs" role="tablist"><button class="tab active" id="loginTab" type="button" role="tab" aria-selected="true">Entrar</button><button class="tab" id="registerTab" type="button" role="tab" aria-selected="false">Criar conta</button></div><p class="notice" id="notice" aria-live="polite"></p>
+      <form id="loginForm"><label>E-mail<input type="email" name="email" autocomplete="email" placeholder="voce@empresa.com" required></label><label>Senha<input type="password" name="password" autocomplete="current-password" placeholder="Sua senha" required></label><button class="submit" type="submit">Entrar na plataforma</button></form>
+      <form id="registerForm" class="hidden"><div class="two"><label>Seu nome<input type="text" name="name" autocomplete="name" placeholder="Como quer ser chamado" required></label><label>Empresa<input type="text" name="company" autocomplete="organization" placeholder="Nome da empresa" required></label></div><label>E-mail profissional<input type="email" name="email" autocomplete="email" placeholder="voce@empresa.com" required></label><label>Crie uma senha<input type="password" name="password" autocomplete="new-password" minlength="8" placeholder="No mínimo 8 caracteres" required></label><button class="submit" type="submit">Criar minha conta</button><p class="terms">Ao criar a conta, você concorda em usar a plataforma apenas com dados e contatos autorizados.</p></form><div class="security"><b>●</b><span>Seus dados de canal ficam protegidos e separados por empresa.</span></div>
+    </div></section>
+  </main>
+  <script>
+    const loginTab = document.getElementById('loginTab'), registerTab = document.getElementById('registerTab'); const loginForm = document.getElementById('loginForm'), registerForm = document.getElementById('registerForm'); const notice = document.getElementById('notice');
+    function swap(mode) { const registering = mode === 'register'; loginTab.classList.toggle('active', !registering); registerTab.classList.toggle('active', registering); loginTab.setAttribute('aria-selected', String(!registering)); registerTab.setAttribute('aria-selected', String(registering)); loginForm.classList.toggle('hidden', registering); registerForm.classList.toggle('hidden', !registering); document.getElementById('heading').textContent = registering ? 'Comece sua operação.' : 'Que bom ver você.'; document.getElementById('subheading').textContent = registering ? 'Crie o espaço da sua empresa em poucos segundos.' : 'Entre para acessar a operação da sua empresa.'; notice.textContent = ''; notice.className = 'notice'; }
+    loginTab.addEventListener('click', () => swap('login')); registerTab.addEventListener('click', () => swap('register'));
+    async function submit(form, endpoint) { const button = form.querySelector('button'); button.disabled = true; const label = button.textContent; button.textContent = 'Aguarde…'; notice.textContent = ''; try { const body = Object.fromEntries(new FormData(form)); const response = await fetch(endpoint, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Não foi possível continuar.'); location.assign(data.admin ? '/admin.html' : '/app.html'); } catch (error) { notice.textContent = error.message; notice.className = 'notice'; button.disabled = false; button.textContent = label; } }
+    loginForm.addEventListener('submit', event => { event.preventDefault(); submit(loginForm, '/api/auth/login'); }); registerForm.addEventListener('submit', event => { event.preventDefault(); submit(registerForm, '/api/auth/register'); });
+    fetch('/api/session').then(async response => { if (!response.ok) return; const session = await response.json(); location.replace(session.admin ? '/admin.html' : '/app.html'); }).catch(() => {});
+  </script>
+</body>
+</html>
