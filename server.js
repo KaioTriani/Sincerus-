@@ -157,18 +157,65 @@ function safeIntegration(item) {
 }
 function tenantIntegrations(tenantId) { return db.integrations.filter(item => item.tenantId === tenantId); }
 function getIntegration(tenantId, type) { return tenantIntegrations(tenantId).find(item => item.type === type && item.enabled); }
-function seedWelcome(tenantId) {
-  if (db.contacts.some(item => item.tenantId === tenantId)) return;
-  const contact = { id: id('contact'), tenantId, name: 'Mariana Costa', phone: '+5511999184027', email: 'mariana@example.com', tags: ['Lead quente'], createdAt: now() };
-  db.contacts.push(contact);
-  db.messages.push({ id: id('msg'), tenantId, contactId: contact.id, direction: 'inbound', channel: 'whatsapp', content: 'Olá! Queria entender os planos disponíveis.', status: 'received', createdAt: now() });
-  saveDb();
+function dayKey(value) { return String(value || '').slice(0, 10); }
+function daysUntilToday(total = 7) {
+  const days = [];
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  for (let offset = total - 1; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setUTCDate(date.getUTCDate() - offset);
+    days.push(date.toISOString().slice(0, 10));
+  }
+  return days;
+}
+function dashboardMetrics(messages, contacts) {
+  const today = dayKey(now());
+  const todayMessages = messages.filter(message => dayKey(message.createdAt) === today);
+  const incomingToday = todayMessages.filter(message => message.direction === 'inbound').length;
+  const outgoingToday = todayMessages.filter(message => message.direction === 'outbound' && message.status === 'sent').length;
+  const activeConversations = new Set(todayMessages.map(message => message.contactId).filter(Boolean)).size;
+  const responseTimes = [];
+  const repliedInbound = new Set();
+  const waitingInbound = new Map();
+  for (const message of messages) {
+    if (!message.contactId) continue;
+    if (message.direction === 'inbound' && !waitingInbound.has(message.contactId)) waitingInbound.set(message.contactId, message);
+    if (message.direction === 'outbound' && message.status === 'sent' && waitingInbound.has(message.contactId)) {
+      const inbound = waitingInbound.get(message.contactId);
+      const seconds = (new Date(message.createdAt) - new Date(inbound.createdAt)) / 1000;
+      if (Number.isFinite(seconds) && seconds >= 0) {
+        responseTimes.push(seconds);
+        repliedInbound.add(inbound.id);
+      }
+      waitingInbound.delete(message.contactId);
+    }
+  }
+  const inboundMessages = messages.filter(message => message.direction === 'inbound');
+  const responseRate = inboundMessages.length ? Math.round((repliedInbound.size / inboundMessages.length) * 100) : null;
+  const recentDays = daysUntilToday();
+  const volume = recentDays.map(date => ({
+    date,
+    received: messages.filter(message => dayKey(message.createdAt) === date && message.direction === 'inbound').length,
+    sent: messages.filter(message => dayKey(message.createdAt) === date && message.direction === 'outbound' && message.status === 'sent').length
+  }));
+  return {
+    incomingToday,
+    outgoingToday,
+    activeConversations,
+    contacts: contacts.length,
+    inboundTotal: messages.filter(message => message.direction === 'inbound').length,
+    outboundTotal: messages.filter(message => message.direction === 'outbound' && message.status === 'sent').length,
+    averageFirstResponseSeconds: responseTimes.length ? Math.round(responseTimes.reduce((sum, value) => sum + value, 0) / responseTimes.length) : null,
+    responseRate,
+    volume,
+    totalMessages: messages.length
+  };
 }
 function overview(tenantId) {
-  seedWelcome(tenantId);
   const messages = db.messages.filter(item => item.tenantId === tenantId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const contacts = db.contacts.filter(item => item.tenantId === tenantId);
-  return { contacts, messages: messages.slice(-100), integrations: tenantIntegrations(tenantId).map(safeIntegration), metrics: { openConversations: Math.max(1, contacts.length), contacts: contacts.length, sentToday: messages.filter(item => item.direction === 'outbound' && item.createdAt.slice(0, 10) === now().slice(0, 10)).length } };
+  return { contacts, messages: messages.slice(-100), integrations: tenantIntegrations(tenantId).map(safeIntegration), metrics: dashboardMetrics(messages, contacts) };
 }
 function adminTenantList() {
   return db.tenants.map(tenant => {
@@ -252,6 +299,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/auth/logout') { endSession(req); return json(res, 200, { ok: true }, { 'set-cookie': 'conversa_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' }); }
     if (req.method === 'GET' && pathname === '/api/session') { const active = sessionFor(req); if (!active) return json(res, 401, { error: 'Nao autenticado.' }); if (active.admin) return json(res, 200, { user: { name: active.user.name, email: active.user.email, role: active.user.role }, admin: true }); return json(res, 200, { user: { name: active.user.name, email: active.user.email, role: active.user.role }, tenant: { name: active.tenant.name, status: active.tenant.status || 'active' }, admin: false }); }
     if (req.method === 'GET' && pathname === '/api/admin/tenants') { const admin = requirePlatformAdmin(req, res); if (!admin) return; return json(res, 200, { tenants: adminTenantList(), audit: db.auditLog.slice(-20).reverse() }); }
+    if (req.method === 'POST' && pathname === '/api/admin/tenants') {
+      const admin = requirePlatformAdmin(req, res); if (!admin) return;
+      const body = await readBody(req);
+      const company = safeText(body.company, 120); const name = safeText(body.name, 120); const email = safeText(body.email, 180).toLowerCase(); const password = String(body.password || '');
+      if (!company || !name || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return bad(res, 'Preencha empresa, responsável, e-mail válido e uma senha de pelo menos 8 caracteres.');
+      if (db.users.some(user => user.email === email)) return bad(res, 'Este e-mail já possui uma conta. Use outro e-mail para a empresa. ', 409);
+      const tenant = { id: id('tenant'), name: company, status: 'active', createdAt: now() };
+      const owner = { id: id('user'), tenantId: tenant.id, name, email, passwordHash: hashPassword(password), role: 'owner', createdAt: now() };
+      db.tenants.push(tenant); db.users.push(owner); audit(admin.user.id, 'tenant_created', tenant.id, { company, ownerEmail: email }); saveDb();
+      return json(res, 201, { tenant: adminTenantList().find(item => item.id === tenant.id), owner: { name, email } });
+    }
     const adminStatusMatch = pathname.match(/^\/api\/admin\/tenants\/([^/]+)\/status$/);
     if (req.method === 'POST' && adminStatusMatch) { const admin = requirePlatformAdmin(req, res); if (!admin) return; const body = await readBody(req); const status = safeText(body.status, 20); if (!['active', 'suspended'].includes(status)) return bad(res, 'Status invalido.'); const tenant = db.tenants.find(item => item.id === adminStatusMatch[1]); if (!tenant) return bad(res, 'Empresa nao encontrada.', 404); tenant.status = status; tenant.suspendedAt = status === 'suspended' ? now() : null; tenant.suspensionReason = status === 'suspended' ? safeText(body.reason, 180) || 'Inadimplencia' : null; if (status === 'suspended') { const tenantUsers = new Set(db.users.filter(user => user.tenantId === tenant.id).map(user => user.id)); db.sessions = db.sessions.filter(session => !tenantUsers.has(session.userId)); } audit(admin.user.id, status === 'suspended' ? 'tenant_suspended' : 'tenant_reactivated', tenant.id, { reason: tenant.suspensionReason }); saveDb(); return json(res, 200, adminTenantList().find(item => item.id === tenant.id)); }
     if (req.method === 'GET' && pathname === '/api/overview') { const active = requireSession(req, res); if (!active) return; return json(res, 200, overview(active.tenant.id)); }

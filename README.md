@@ -51,6 +51,10 @@ Defina as três variáveis `PLATFORM_ADMIN_*` acima antes de iniciar a plataform
 
 O botão **Suspender** encerra imediatamente as sessões dos usuários daquela empresa e bloqueia novos acessos, sem apagar dados. Use-o em inadimplência. O botão passa a ser **Reativar** assim que o pagamento for regularizado. Cada alteração fica registrada em “Últimas ações”.
 
+Para configurar a sua própria operação, entre na área mestre e clique em **Cadastrar empresa**. Informe um e-mail de acesso da empresa (diferente do e-mail mestre), saia e entre com esse novo acesso. No painel operacional, use **Canais → Conectar WhatsApp**. O painel mestre continua reservado para administrar todos os clientes.
+
+Os indicadores do painel operacional são calculados a partir das mensagens efetivamente recebidas e enviadas pela plataforma: conversas ativas, mensagens do dia, tempo de primeira resposta, taxa de resposta, contatos e volume dos últimos sete dias.
+
 ## Conectar WhatsApp Business
 
 1. Crie/registre a aplicação no Meta for Developers e associe o produto WhatsApp.

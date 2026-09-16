@@ -71,6 +71,11 @@
     .metric-value { font-weight:750; font-size:29px; letter-spacing:-1px; margin:13px 0 7px; }
     .metric-change { font-size:12px; color:#478251; font-weight:600; }
     .metric-change.neutral { color:var(--muted); font-weight:500; }
+    .setup-card { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:17px 19px; margin:-6px 0 18px; background:#eff9f1; border:1px solid #cbe7d1; border-radius:14px; }
+    .setup-card strong { display:block; font-size:14px; margin-bottom:4px; }
+    .setup-card p { margin:0; color:#4a6856; font-size:12px; line-height:1.45; }
+    .setup-card[hidden] { display:none; }
+    .metric-hint { font-size:12px; color:var(--muted); font-weight:500; }
     .dashboard-grid { display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(290px,.8fr); gap:18px; }
     .card-heading { display:flex; align-items:center; justify-content:space-between; padding:18px 19px 0; }
     .card-heading h2 { font-size:15px; letter-spacing:-.2px; margin:0; }
@@ -301,15 +306,16 @@
       <header class="topbar"><div class="crumb">Orla Studio <span> / </span><strong id="breadcrumb">Visão geral</strong></div><button class="icon-button" data-toast="Nenhuma nova notificação.">♧</button><button class="icon-button" data-toast="Ajuda: conecte um canal, convide a equipe e publique sua primeira automação.">?</button><div class="avatar top-avatar">KT</div></header>
       <div class="page">
         <section id="dashboard" class="view active">
-          <div class="headline"><div><h1>Bom dia, Kaio 👋</h1><p>Veja como sua operação está performando hoje.</p></div><div class="actions"><button class="button secondary" data-view="analytics">Ver relatórios</button><button class="button" data-view="inbox">Abrir atendimentos</button></div></div>
+          <div class="headline"><div><h1 id="dashboardGreeting">Olá 👋</h1><p>Indicadores atualizados a partir das mensagens da sua operação.</p></div><div class="actions"><button class="button secondary" data-view="analytics">Ver relatórios</button><button class="button" data-view="channels">Conectar WhatsApp</button></div></div>
+          <article class="setup-card" id="channelOnboarding" hidden><div><strong>Ative sua central de atendimento</strong><p>Conecte o WhatsApp Business oficial para começar a receber mensagens, criar contatos e preencher seus indicadores.</p></div><button class="button" type="button" data-connect="whatsapp">Conectar WhatsApp</button></article>
           <div class="metric-grid">
-            <article class="metric section-card"><div class="metric-label">Conversas em andamento <span>↗</span></div><div class="metric-value">86</div><div class="metric-change">↑ 12,3% <span style="color:var(--muted);font-weight:500">vs. ontem</span></div></article>
-            <article class="metric section-card"><div class="metric-label">Tempo médio de 1ª resposta <span>◷</span></div><div class="metric-value">2m 18s</div><div class="metric-change">↓ 31s <span style="color:var(--muted);font-weight:500">vs. ontem</span></div></article>
-            <article class="metric section-card"><div class="metric-label">Resolvidas hoje <span>✓</span></div><div class="metric-value">142</div><div class="metric-change">↑ 8,6% <span style="color:var(--muted);font-weight:500">vs. ontem</span></div></article>
-            <article class="metric section-card"><div class="metric-label">CSAT médio <span>★</span></div><div class="metric-value">4,8</div><div class="metric-change neutral">Baseado em 93 respostas</div></article>
+            <article class="metric section-card"><div class="metric-label">Conversas ativas <span>↗</span></div><div class="metric-value" id="metricActive">—</div><div class="metric-hint">Contatos com mensagem hoje</div></article>
+            <article class="metric section-card"><div class="metric-label">Recebidas hoje <span>↓</span></div><div class="metric-value" id="metricReceived">—</div><div class="metric-hint">Mensagens que chegaram pelos canais</div></article>
+            <article class="metric section-card"><div class="metric-label">Enviadas hoje <span>↑</span></div><div class="metric-value" id="metricSent">—</div><div class="metric-hint">Mensagens entregues pela plataforma</div></article>
+            <article class="metric section-card"><div class="metric-label">1ª resposta média <span>◷</span></div><div class="metric-value" id="metricFirstResponse">—</div><div class="metric-hint" id="metricResponseHint">Aguardando primeiras respostas</div></article>
           </div>
           <div class="dashboard-grid">
-            <article class="section-card"><div class="card-heading"><div><h2>Volume de conversas</h2><small>Últimos 7 dias</small></div><button class="button secondary" data-toast="Filtro alterado para os últimos 7 dias.">7 dias⌄</button></div><div class="chart-wrap"><div class="chart"><svg viewBox="0 0 740 220" preserveAspectRatio="none" role="img" aria-label="Linha de conversas recebidas e resolvidas nos últimos sete dias"><defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a4e0af" stop-opacity=".45"/><stop offset="1" stop-color="#a4e0af" stop-opacity="0"/></linearGradient></defs><path d="M0,186 L0,140 C52,132 72,155 123,117 C174,79 203,113 246,91 C301,64 330,102 370,69 C421,28 465,79 492,66 C551,37 588,62 617,43 C657,24 699,34 740,13 L740,220 L0,220Z" fill="url(#area)"/><path d="M0,140 C52,132 72,155 123,117 C174,79 203,113 246,91 C301,64 330,102 370,69 C421,28 465,79 492,66 C551,37 588,62 617,43 C657,24 699,34 740,13" fill="none" stroke="#22734c" stroke-width="3"/><path d="M0,174 C52,167 79,175 123,147 C168,121 196,145 246,130 C301,109 330,133 370,105 C421,73 450,121 492,98 C545,74 582,98 617,83 C657,68 699,72 740,58" fill="none" stroke="#a0aba4" stroke-width="2.5" stroke-dasharray="6 6"/></svg></div><div class="chart-labels"><span>Seg, 09</span><span>Ter, 10</span><span>Qua, 11</span><span>Qui, 12</span><span>Sex, 13</span><span>Sáb, 14</span><span>Hoje</span></div><div class="legend"><span><i class="dot" style="background:#22734c"></i>Recebidas</span><span><i class="dot" style="background:#a0aba4"></i>Resolvidas</span></div></div></article>
+            <article class="section-card"><div class="card-heading"><div><h2>Volume de mensagens</h2><small>Últimos 7 dias</small></div><button class="button secondary" data-toast="O gráfico usa as mensagens registradas nos seus canais.">7 dias</button></div><div class="chart-wrap"><div class="chart"><svg id="volumeChart" viewBox="0 0 740 220" preserveAspectRatio="none" role="img" aria-label="Linha de mensagens recebidas e enviadas nos últimos sete dias"><defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a4e0af" stop-opacity=".45"/><stop offset="1" stop-color="#a4e0af" stop-opacity="0"/></linearGradient></defs></svg></div><div class="chart-labels" id="volumeLabels"></div><div class="legend"><span><i class="dot" style="background:#22734c"></i>Recebidas</span><span><i class="dot" style="background:#a0aba4"></i>Enviadas</span></div></div></article>
             <article class="section-card"><div class="card-heading"><div><h2>Atividade recente</h2><small>Da sua equipe</small></div><button class="button secondary" data-view="inbox">Ver tudo</button></div><div class="activity"><div class="activity-row"><div class="activity-icon">✓</div><div class="activity-text"><strong>Bruna</strong> resolveu a conversa com <strong>Mariana Costa</strong><br><span style="color:var(--muted)">Dúvida sobre entrega</span></div><span class="activity-time">agora</span></div><div class="activity-row"><div class="activity-icon">↝</div><div class="activity-text"><strong>Automação</strong> enviou a pesquisa de satisfação para 12 clientes</div><span class="activity-time">8 min</span></div><div class="activity-row"><div class="activity-icon">+</div><div class="activity-text"><strong>Rafael</strong> criou oportunidade de <strong>R$ 6.800</strong><br><span style="color:var(--muted)">Empresa: Nimbus Lab</span></div><span class="activity-time">26 min</span></div><div class="activity-row"><div class="activity-icon">◎</div><div class="activity-text"><strong>WhatsApp Comercial</strong> conectado com sucesso</div><span class="activity-time">1 h</span></div></div></article>
           </div>
         </section>
@@ -351,7 +357,7 @@
 
         <section id="analytics" class="view">
           <div class="headline"><div><h1>Relatórios</h1><p>Indicadores para acompanhar produtividade e qualidade do atendimento.</p></div><div class="actions"><button class="button secondary" data-toast="Relatório exportado como CSV.">Exportar</button><button class="button" data-toast="Agendamento mensal salvo.">Agendar relatório</button></div></div>
-          <div class="metric-grid"><article class="metric section-card"><div class="metric-label">Taxa de resolução</div><div class="metric-value">91,4%</div><div class="metric-change">↑ 4,1 p.p. <span style="color:var(--muted);font-weight:500">este mês</span></div></article><article class="metric section-card"><div class="metric-label">Tempo médio de resolução</div><div class="metric-value">11m 04s</div><div class="metric-change">↓ 2m 10s <span style="color:var(--muted);font-weight:500">este mês</span></div></article><article class="metric section-card"><div class="metric-label">Taxa de reabertura</div><div class="metric-value">3,2%</div><div class="metric-change neutral">Meta: abaixo de 5%</div></article><article class="metric section-card"><div class="metric-label">Conversão por chat</div><div class="metric-value">18,7%</div><div class="metric-change">↑ 2,8 p.p. <span style="color:var(--muted);font-weight:500">este mês</span></div></article></div>
+          <div class="metric-grid"><article class="metric section-card"><div class="metric-label">Taxa de resposta</div><div class="metric-value" id="reportResponseRate">—</div><div class="metric-hint">Entradas que receberam retorno</div></article><article class="metric section-card"><div class="metric-label">Mensagens recebidas</div><div class="metric-value" id="reportReceived">—</div><div class="metric-hint">Total registrado na operação</div></article><article class="metric section-card"><div class="metric-label">Mensagens enviadas</div><div class="metric-value" id="reportSent">—</div><div class="metric-hint">Envios confirmados pelos canais</div></article><article class="metric section-card"><div class="metric-label">Contatos no CRM</div><div class="metric-value" id="reportContacts">—</div><div class="metric-hint">Leads e clientes identificados</div></article></div>
           <article class="section-card"><div class="card-heading"><div><h2>Desempenho por atendente</h2><small>Últimos 30 dias</small></div><button class="button secondary" data-toast="Dados atualizados agora.">Atualizar</button></div><div class="team-table"><table><thead><tr><th>Atendente</th><th>Conversas resolvidas</th><th>1ª resposta</th><th>CSAT</th><th>Conversão</th></tr></thead><tbody><tr><td><div class="person"><span class="avatar">BF</span><span>Bruna Ferreira<small>Vendas</small></span></div></td><td>384</td><td>1m 47s</td><td>4,9 ★</td><td>22,1%</td></tr><tr><td><div class="person"><span class="avatar" style="background:#d7ede0;color:#3e7154">RM</span><span>Rafael Martins<small>Suporte</small></span></div></td><td>351</td><td>2m 05s</td><td>4,8 ★</td><td>16,4%</td></tr><tr><td><div class="person"><span class="avatar" style="background:#dfe3fa;color:#4e568e">LS</span><span>Larissa Santos<small>Suporte</small></span></div></td><td>329</td><td>2m 26s</td><td>4,8 ★</td><td>14,8%</td></tr><tr><td><div class="person"><span class="avatar" style="background:#f4d8e1;color:#94516a">VN</span><span>Victor Nunes<small>Vendas</small></span></div></td><td>286</td><td>2m 33s</td><td>4,7 ★</td><td>19,2%</td></tr></tbody></table></div></article>
         </section>
 
@@ -448,6 +454,43 @@
         sms: { icon:'⌁', className:'sms', title:'SMS', connected:'Envio e recebimento com Twilio', pending:'Envie lembretes e notificações por SMS.' }
       };
       function initials(name) { return String(name || 'VC').split(/\s+/).slice(0,2).map(part => part[0]).join('').toUpperCase(); }
+      function formatDuration(seconds) {
+        if (seconds === null || seconds === undefined) return '—';
+        const total = Math.max(0, Number(seconds) || 0); const minutes = Math.floor(total / 60); const remainder = Math.round(total % 60);
+        return minutes ? `${minutes}m ${String(remainder).padStart(2, '0')}s` : `${remainder}s`;
+      }
+      function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
+      function renderVolume(volume) {
+        const chart = document.getElementById('volumeChart'); const labels = document.getElementById('volumeLabels');
+        if (!chart || !labels) return;
+        const points = Array.isArray(volume) && volume.length ? volume : [];
+        const maximum = Math.max(1, ...points.flatMap(item => [item.received, item.sent]));
+        const coordinates = key => points.map((item, index) => {
+          const x = points.length <= 1 ? 370 : (740 / (points.length - 1)) * index;
+          const y = 202 - ((Number(item[key]) || 0) / maximum) * 176;
+          return [Math.round(x), Math.round(y)];
+        });
+        const line = values => values.map(([x, y], index) => `${index ? 'L' : 'M'}${x},${y}`).join(' ');
+        const received = coordinates('received'); const sent = coordinates('sent');
+        chart.innerHTML = points.length ? `<defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#a4e0af" stop-opacity=".45"/><stop offset="1" stop-color="#a4e0af" stop-opacity="0"/></linearGradient></defs><path d="M${received[0][0]},220 L${line(received).slice(1)} L${received.at(-1)[0]},220 Z" fill="url(#area)"/><path d="${line(received)}" fill="none" stroke="#22734c" stroke-width="3"/><path d="${line(sent)}" fill="none" stroke="#a0aba4" stroke-width="2.5" stroke-dasharray="6 6"/>` : '';
+        labels.innerHTML = points.map(item => `<span>${new Intl.DateTimeFormat('pt-BR', { weekday:'short', day:'2-digit' }).format(new Date(`${item.date}T12:00:00Z`)).replace('.', '')}</span>`).join('');
+      }
+      function renderOverview(overview, session) {
+        const metrics = overview.metrics || {};
+        setText('dashboardGreeting', `Olá, ${String(session.user.name || '').split(' ')[0] || 'por aqui'} 👋`);
+        setText('metricActive', metrics.activeConversations ?? 0);
+        setText('metricReceived', metrics.incomingToday ?? 0);
+        setText('metricSent', metrics.outgoingToday ?? 0);
+        setText('metricFirstResponse', formatDuration(metrics.averageFirstResponseSeconds));
+        setText('metricResponseHint', metrics.responseRate === null || metrics.responseRate === undefined ? 'Aguardando primeiras respostas' : `${metrics.responseRate}% das entradas receberam retorno`);
+        setText('reportResponseRate', metrics.responseRate === null || metrics.responseRate === undefined ? '—' : `${metrics.responseRate}%`);
+        setText('reportReceived', metrics.inboundTotal ?? 0);
+        setText('reportSent', metrics.outboundTotal ?? 0);
+        setText('reportContacts', metrics.contacts ?? 0);
+        const whatsappConnected = (overview.integrations || []).some(item => item.type === 'whatsapp' && item.connected);
+        const onboarding = document.getElementById('channelOnboarding'); if (onboarding) onboarding.hidden = whatsappConnected;
+        renderVolume(metrics.volume);
+      }
       function drawChannels() {
         const cards = document.getElementById('channelCards');
         if (!cards) return;
@@ -458,7 +501,7 @@
         }).join('');
       }
       function connectionFields(type) {
-        if (type === 'whatsapp') return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: WhatsApp Comercial"></div><div class="form-field"><label>ID do número de telefone</label><input name="phoneNumberId" required placeholder="Ex.: 123456789"></div><div class="form-field"><label>ID da conta WhatsApp Business</label><input name="businessAccountId" required placeholder="Ex.: 123456789"></div><div class="form-field full"><label>Token permanente da Meta</label><input name="accessToken" type="password" required placeholder="Cole o token gerado pela Meta"></div><div class="form-field"><label>Token de verificação do webhook</label><input name="verifyToken" required placeholder="Crie um token exclusivo"></div><div class="form-field"><label>Versão da Graph API</label><input name="graphVersion" value="v23.0" required></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Depois de salvar, informe a URL <b>/webhooks/whatsapp</b> no painel da Meta e use o token de verificação definido aqui.</p>`;
+        if (type === 'whatsapp') { const callbackUrl = `${location.origin}/webhooks/whatsapp`; return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: WhatsApp Comercial"></div><div class="form-field"><label>ID do número de telefone</label><input name="phoneNumberId" required placeholder="Ex.: 123456789"></div><div class="form-field"><label>ID da conta WhatsApp Business</label><input name="businessAccountId" required placeholder="Ex.: 123456789"></div><div class="form-field full"><label>Token permanente da Meta</label><input name="accessToken" type="password" required placeholder="Cole o token gerado pela Meta"></div><div class="form-field"><label>Token de verificação do webhook</label><input name="verifyToken" required placeholder="Crie um token exclusivo"></div><div class="form-field"><label>Versão da Graph API</label><input name="graphVersion" value="v23.0" required></div></div><p style="font-size:12px;color:var(--muted);line-height:1.55">Use a Cloud API oficial da Meta. Após salvar, cadastre esta URL de callback no painel Meta: <b>${escapeHtml(callbackUrl)}</b>. Use no painel Meta o mesmo token de verificação informado acima e assine o evento <b>messages</b>.</p>`; }
         if (type === 'email') return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: E-mail Comercial"></div><div class="form-field"><label>Remetente autorizado na Resend</label><input name="fromEmail" type="email" required placeholder="contato@suaempresa.com.br"></div><div class="form-field"><label>Endereço que recebe mensagens</label><input name="inboundAddress" type="email" required placeholder="atendimento@seu-dominio.com"></div><div class="form-field full"><label>Chave de API da Resend</label><input name="apiKey" type="password" required placeholder="re_..."></div><div class="form-field full"><label>Segredo do webhook da Resend</label><input name="webhookSecret" type="password" required placeholder="whsec_..."></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Use um domínio já verificado na Resend e crie um webhook <b>email.received</b> apontando para <b>/webhooks/email</b>.</p>`;
         return `<div class="form-grid"><div class="form-field full"><label>Nome da conexão</label><input name="displayName" required placeholder="Ex.: SMS Comercial"></div><div class="form-field"><label>Número remetente Twilio</label><input name="fromNumber" required placeholder="+5511999999999"></div><div class="form-field"><label>Account SID</label><input name="accountSid" required placeholder="AC..."></div><div class="form-field full"><label>Auth Token da Twilio</label><input name="authToken" type="password" required placeholder="Token secreto"></div></div><p style="font-size:12px;color:var(--muted);line-height:1.5">Para receber SMS, aponte o webhook da Twilio para <b>/webhooks/sms</b>.</p>`;
       }
@@ -485,7 +528,7 @@
           document.getElementById('workspaceName').textContent = session.tenant.name;
           document.getElementById('profileName').textContent = session.user.name;
           document.getElementById('profileAvatar').textContent = initials(session.user.name);
-          const overview = await api('/api/overview'); activeChannels = overview.integrations; drawChannels();
+          const overview = await api('/api/overview'); activeChannels = overview.integrations; renderOverview(overview, session); drawChannels();
         } catch (error) { location.replace('/'); }
       }
       document.addEventListener('click', event => {
