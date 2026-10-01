@@ -45,6 +45,29 @@ Para receber webhooks em produção, publique a aplicação atrás de HTTPS e co
 
 Nunca coloque nenhuma dessas chaves no HTML, no Git ou em uma conta de cliente.
 
+## Webhook do WhatsApp Cloud API (Meta)
+
+O endpoint já está implementado em `GET` e `POST /webhooks/whatsapp`.
+
+No ambiente da Hostinger, acrescente estas variáveis antes de clicar em **Redeploy**:
+
+| Variável | Valor |
+| --- | --- |
+| `WHATSAPP_PHONE_NUMBER_ID` | `1354252097771775` |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | `1609620544225345` |
+| `META_WEBHOOK_VERIFY_TOKEN` | Crie uma frase longa, aleatória e exclusiva. Use exatamente o mesmo valor no campo “Verificar token” da Meta. |
+| `META_APP_SECRET` | App Secret da sua aplicação no Meta for Developers. Obrigatório em produção para validar a assinatura `X-Hub-Signature-256`. |
+| `WHATSAPP_ACCESS_TOKEN` | Token temporário/permanente gerado pela Meta. Ele permite enviar respostas e não deve ser incluído no Git. |
+
+Na tela **Configurar webhooks** da Meta, informe:
+
+- **URL de callback:** `https://SEU-DOMINIO/webhooks/whatsapp`
+- **Verificar token:** o mesmo valor de `META_WEBHOOK_VERIFY_TOKEN`
+- Assine o campo **messages**.
+
+A validação responde ao desafio da Meta no `GET`. No `POST`, a plataforma valida a assinatura, recebe mensagens, evita duplicidade pelo ID do provedor, cria/atualiza o contato no CRM e registra atualizações de entrega, leitura ou falha. Para vincular as mensagens ao seu espaço, entre na empresa no Conversa e abra **Canais → Conectar WhatsApp**; os valores do ambiente preenchem a integração quando os campos forem deixados em branco.
+
+
 ## Conta ADM e inadimplência
 
 Defina as três variáveis `PLATFORM_ADMIN_*` acima antes de iniciar a plataforma pela primeira vez. Ao entrar com esse e-mail, o Conversa abre a área exclusiva `admin.html`, que exibe todas as empresas cadastradas, responsável, canais conectados, contatos, volume de mensagens e situação.
