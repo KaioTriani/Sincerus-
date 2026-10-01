@@ -14,7 +14,7 @@ const appSecret = process.env.APP_SECRET || 'troque-esta-chave-antes-de-publicar
 const encryptionKey = crypto.scryptSync(process.env.APP_ENCRYPTION_KEY || appSecret, 'conversa-crm-v1', 32);
 
 function initialDb() {
-  return { users: [], tenants: [], sessions: [], integrations: [], contacts: [], messages: [], auditLog: [] };
+  return { users: [], tenants: [], sessions: [], integrations: [], contacts: [], messages: [], auditLog: [], webhookEvents: [] };
 }
 
 function loadDb() {
@@ -65,11 +65,55 @@ function decrypt(value) {
   return JSON.parse(Buffer.concat([decipher.update(Buffer.from(encryptedText, 'base64url')), decipher.final()]).toString('utf8'));
 }
 function metaSignatureIsValid(raw, signature) {
-  const appSecret = process.env.META_APP_SECRET;
-  if (!appSecret) return true;
+  const appSecret = safeText(process.env.META_APP_SECRET, 300);
+  if (!appSecret) return process.env.NODE_ENV !== 'production';
   const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(raw).digest('hex')}`;
   if (!signature || signature.length !== expected.length) return false;
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+function configuredWhatsapp(type) {
+  const values = {
+    phoneNumberId: safeText(process.env.WHATSAPP_PHONE_NUMBER_ID, 80),
+    businessAccountId: safeText(process.env.WHATSAPP_BUSINESS_ACCOUNT_ID, 80),
+    accessToken: safeText(process.env.WHATSAPP_ACCESS_TOKEN, 2000),
+    verifyToken: safeText(process.env.META_WEBHOOK_VERIFY_TOKEN, 300)
+  };
+  return type ? values[type] : values;
+}
+function webhookTokenIsValid(token) {
+  const configuredToken = configuredWhatsapp('verifyToken');
+  if (configuredToken && safeSignatureMatch(configuredToken, token)) return true;
+  return db.integrations.some(item => {
+    if (item.type !== 'whatsapp' || !item.enabled) return false;
+    try { return safeSignatureMatch(safeText(decrypt(item.secrets).verifyToken, 300), token); }
+    catch { return false; }
+  });
+}
+function logWebhookEvent(event) {
+  db.webhookEvents.push({ id: id('webhook'), createdAt: now(), ...event });
+  db.webhookEvents = db.webhookEvents.slice(-200);
+}
+function integrationForWhatsappPhone(phoneNumberId) {
+  return db.integrations.find(item => item.type === 'whatsapp' && item.enabled && item.phoneNumberId === phoneNumberId) || null;
+}
+function whatsappMessageText(message) {
+  if (message?.text?.body) return message.text.body;
+  if (message?.button?.text) return message.button.text;
+  if (message?.interactive?.button_reply?.title) return message.interactive.button_reply.title;
+  if (message?.interactive?.list_reply?.title) return message.interactive.list_reply.title;
+  return `[${safeText(message?.type, 40) || 'mensagem'}]`;
+}
+function applyWhatsappStatus(tenantId, status) {
+  const message = db.messages.find(item => item.tenantId === tenantId && item.providerId === status.id);
+  if (!message) return false;
+  message.deliveryStatus = safeText(status.status, 30);
+  if (status.status === 'failed') {
+    message.status = 'failed';
+    message.error = safeText(status.errors?.[0]?.title || status.errors?.[0]?.message || 'A Meta não conseguiu entregar a mensagem.', 500);
+  }
+  if (status.status === 'delivered') message.deliveredAt = now();
+  if (status.status === 'read') message.readAt = now();
+  return true;
 }
 function safeSignatureMatch(expected, supplied) {
   if (!supplied || supplied.length !== expected.length) return false;
@@ -231,9 +275,11 @@ function audit(actorId, action, tenantId, details = {}) {
 }
 async function sendWhatsapp(integration, recipient, content) {
   const secret = decrypt(integration.secrets);
-  if (!secret.accessToken || !integration.phoneNumberId) throw new Error('Informe o token permanente e o ID do numero do WhatsApp.');
+  const accessToken = secret.accessToken || configuredWhatsapp('accessToken');
+  const phoneNumberId = integration.phoneNumberId || configuredWhatsapp('phoneNumberId');
+  if (!accessToken || !phoneNumberId) throw new Error('Informe o token permanente e o ID do número do WhatsApp.');
   const version = integration.graphVersion || 'v23.0';
-  const response = await fetch(`https://graph.facebook.com/${version}/${encodeURIComponent(integration.phoneNumberId)}/messages`, { method: 'POST', headers: { authorization: `Bearer ${secret.accessToken}`, 'content-type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to: recipient.replace(/\D/g, ''), type: 'text', text: { body: content } }) });
+  const response = await fetch(`https://graph.facebook.com/${version}/${encodeURIComponent(phoneNumberId)}/messages`, { method: 'POST', headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to: recipient.replace(/\D/g, ''), type: 'text', text: { body: content } }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload?.error?.message || 'A Meta recusou o envio da mensagem.');
   return payload;
@@ -317,8 +363,8 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/integrations' && req.method === 'POST') {
       const active = requireSession(req, res); if (!active) return; const body = await readBody(req); const type = safeText(body.type, 20); if (!['whatsapp', 'email', 'sms'].includes(type)) return bad(res, 'Canal invalido.');
       const existing = db.integrations.find(item => item.tenantId === active.tenant.id && item.type === type); const integration = existing || { id: id('channel'), tenantId: active.tenant.id, type, createdAt: now() };
-      const publicFields = type === 'whatsapp' ? { displayName: safeText(body.displayName, 100), phoneNumberId: safeText(body.phoneNumberId, 80), businessAccountId: safeText(body.businessAccountId, 80), graphVersion: safeText(body.graphVersion, 16) || 'v23.0' } : type === 'email' ? { provider: 'resend', displayName: safeText(body.displayName, 100), fromEmail: safeText(body.fromEmail, 180), inboundAddress: safeText(body.inboundAddress, 180).toLowerCase() } : { provider: 'twilio', displayName: safeText(body.displayName, 100), fromNumber: safeText(body.fromNumber, 32) };
-      const secretFields = type === 'whatsapp' ? { accessToken: safeText(body.accessToken, 2000), verifyToken: safeText(body.verifyToken, 300) } : type === 'email' ? { apiKey: safeText(body.apiKey, 1000), webhookSecret: safeText(body.webhookSecret, 300) } : { accountSid: safeText(body.accountSid, 100), authToken: safeText(body.authToken, 300) };
+      const publicFields = type === 'whatsapp' ? { displayName: safeText(body.displayName, 100), phoneNumberId: safeText(body.phoneNumberId, 80) || configuredWhatsapp('phoneNumberId'), businessAccountId: safeText(body.businessAccountId, 80) || configuredWhatsapp('businessAccountId'), graphVersion: safeText(body.graphVersion, 16) || 'v23.0' } : type === 'email' ? { provider: 'resend', displayName: safeText(body.displayName, 100), fromEmail: safeText(body.fromEmail, 180), inboundAddress: safeText(body.inboundAddress, 180).toLowerCase() } : { provider: 'twilio', displayName: safeText(body.displayName, 100), fromNumber: safeText(body.fromNumber, 32) };
+      const secretFields = type === 'whatsapp' ? { accessToken: safeText(body.accessToken, 2000) || configuredWhatsapp('accessToken'), verifyToken: safeText(body.verifyToken, 300) || configuredWhatsapp('verifyToken') } : type === 'email' ? { apiKey: safeText(body.apiKey, 1000), webhookSecret: safeText(body.webhookSecret, 300) } : { accountSid: safeText(body.accountSid, 100), authToken: safeText(body.authToken, 300) };
       if (Object.values(publicFields).some(value => !value) || Object.values(secretFields).some(value => !value)) return bad(res, 'Preencha todos os dados da conexao.');
       Object.assign(integration, publicFields, { secrets: encrypt(JSON.stringify(secretFields)), enabled: true, connectedAt: now(), updatedAt: now() }); if (!existing) db.integrations.push(integration); saveDb(); return json(res, 200, safeIntegration(integration));
     }
@@ -332,11 +378,27 @@ const server = http.createServer(async (req, res) => {
       catch (error) { message.status = 'failed'; message.error = error.message; saveDb(); return bad(res, error.message, 502); }
     }
     if (pathname === '/webhooks/whatsapp' && req.method === 'GET') {
-      const token = url.searchParams.get('hub.verify_token'); const integration = db.integrations.find(item => item.type === 'whatsapp' && item.enabled && decrypt(item.secrets).verifyToken === token);
-      if (url.searchParams.get('hub.mode') === 'subscribe' && integration) return send(res, 200, url.searchParams.get('hub.challenge') || ''); return send(res, 403, 'verification failed');
+      const mode = url.searchParams.get('hub.mode'); const token = url.searchParams.get('hub.verify_token'); const challenge = url.searchParams.get('hub.challenge');
+      if (mode === 'subscribe' && challenge && token && webhookTokenIsValid(token)) return send(res, 200, challenge);
+      return send(res, 403, 'verification failed');
     }
     if (pathname === '/webhooks/whatsapp' && req.method === 'POST') {
-      const body = await readBody(req); if (!metaSignatureIsValid(body._rawBody, req.headers['x-hub-signature-256'])) return bad(res, 'Assinatura do webhook da Meta invalida.', 401); for (const entry of body.entry || []) for (const change of entry.changes || []) { const value = change.value || {}; const phoneNumberId = value.metadata?.phone_number_id; const integration = db.integrations.find(item => item.type === 'whatsapp' && item.enabled && item.phoneNumberId === phoneNumberId); if (!integration) continue; const names = Object.fromEntries((value.contacts || []).map(item => [item.wa_id, item.profile?.name])); for (const incoming of value.messages || []) { const content = incoming.text?.body || incoming.button?.text || `[${incoming.type || 'mensagem'}]`; saveInbound(integration.tenantId, 'whatsapp', { name: names[incoming.from], phone: `+${incoming.from}`, content }); } } return json(res, 200, { ok: true });
+      const body = await readBody(req);
+      if (!metaSignatureIsValid(body._rawBody, req.headers['x-hub-signature-256'])) return bad(res, 'Assinatura do webhook da Meta inválida.', 401);
+      if (body.object !== 'whatsapp_business_account') return json(res, 200, { ok: true, ignored: true });
+      let received = 0; let statuses = 0; let unmatched = 0;
+      for (const entry of body.entry || []) for (const change of entry.changes || []) {
+        const value = change.value || {}; const phoneNumberId = safeText(value.metadata?.phone_number_id, 80); const integration = integrationForWhatsappPhone(phoneNumberId);
+        if (!integration) { unmatched += 1; continue; }
+        const names = Object.fromEntries((value.contacts || []).map(item => [item.wa_id, item.profile?.name]));
+        for (const incoming of value.messages || []) {
+          saveInbound(integration.tenantId, 'whatsapp', { name: names[incoming.from], phone: `+${incoming.from}`, content: whatsappMessageText(incoming), providerId: incoming.id });
+          received += 1;
+        }
+        for (const status of value.statuses || []) if (applyWhatsappStatus(integration.tenantId, status)) statuses += 1;
+      }
+      logWebhookEvent({ provider: 'meta', event: 'whatsapp', received, statuses, unmatched }); saveDb();
+      return json(res, 200, { ok: true });
     }
     if (pathname === '/webhooks/sms' && req.method === 'POST') { const body = await readBody(req); const integration = db.integrations.find(item => item.type === 'sms' && item.enabled && item.fromNumber === body.To); if (integration && !twilioSignatureIsValid(req, body, integration)) return bad(res, 'Assinatura da Twilio invalida.', 401); if (integration) saveInbound(integration.tenantId, 'sms', { name: body.From, phone: body.From, content: body.Body, providerId: body.MessageSid }); return send(res, 200, '<Response></Response>', { 'content-type': 'text/xml' }); }
     if (pathname === '/webhooks/email' && req.method === 'POST') { const body = await readBody(req); const event = body.data || {}; const recipients = Array.isArray(event.to) ? event.to : [body.to]; const integration = db.integrations.find(item => item.type === 'email' && item.enabled && recipients.filter(Boolean).some(address => String(address).toLowerCase() === item.inboundAddress)); if (!integration) return json(res, 200, { ok: true }); const secret = decrypt(integration.secrets); if (!resendSignatureIsValid(body._rawBody, req.headers, secret.webhookSecret)) return bad(res, 'Assinatura da Resend invalida.', 401); if (body.type !== 'email.received') return json(res, 200, { ok: true }); let content = event.subject || 'Novo e-mail recebido'; try { const received = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(event.email_id)}`, { headers: { authorization: `Bearer ${secret.apiKey}` } }); const email = await received.json(); if (received.ok) content = email.text || String(email.html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || content; } catch {} saveInbound(integration.tenantId, 'email', { name: event.from, email: event.from, content, subject: event.subject, providerId: event.email_id }); return json(res, 200, { ok: true }); }
